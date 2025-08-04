@@ -6,12 +6,12 @@ An automated Claude Code Session reset scheduling system based on ADR-001 and AD
 
 Automatically executes 4 session reset triggers daily (UTC+8), optimized for three core working periods:
 
-| Trigger Time | Reset Time | Target Work Period | Description |
-|:---|:---|:---|:---|
-| **05:23** | **10:23** | 08:00-12:00 | Mid-morning work period reset |
-| **10:23** | **15:23** | 13:00-17:00 | Mid-afternoon work period reset |
-| **17:23** | **22:23** | 20:00-00:00 | Mid-evening work period reset |
-| **22:23** | **Next day 03:23** | Late night period | Additional usage coverage |
+| Trigger Time | Reset Time         | Target Work Period | Description                     |
+| :----------- | :----------------- | :----------------- | :------------------------------ |
+| **05:23**    | **10:00**          | 08:00-12:00        | Mid-morning work period reset   |
+| **10:23**    | **15:00**          | 13:00-17:00        | Mid-afternoon work period reset |
+| **17:23**    | **22:00**          | 20:00-00:00        | Mid-evening work period reset   |
+| **22:23**    | **Next day 03:00** | Late night period  | Additional usage coverage       |
 
 ## 🚀 Setup Steps
 
@@ -105,7 +105,7 @@ Based on ADR-001 decision, current optimal schedule:
 
 ```yaml
 schedule:
-  - cron: '23 21,2,9,14 * * *'  # UTC time, optimized for reliability and work periods
+  - cron: "23 21,2,9,14 * * *" # UTC time, optimized for reliability and work periods
 ```
 
 For adjustments, refer to [ADR-001](./ADR-001-session-reset-schedule.md) for timing principles and [ADR-002](./ADR-002-github-actions-cron-timing-optimization.md) for reliability optimization.
@@ -121,6 +121,7 @@ CLAUDE_CODE_OAUTH_TOKEN_2=oauth_token_yyy...
 ```
 
 **Benefits:**
+
 - **Backup mechanism**: Other tokens continue working if one fails
 - **Load distribution**: Multiple tokens check in simultaneously, improving success rate
 - **Identification tracking**: Each record marks token source
@@ -128,6 +129,7 @@ CLAUDE_CODE_OAUTH_TOKEN_2=oauth_token_yyy...
 ### Environment Variables
 
 Additional variables can be set in GitHub Secrets:
+
 - `TIMEZONE`: Timezone setting (default: Asia/Taipei)
 - `LOG_FORMAT`: Log format (default: CSV)
 
@@ -142,6 +144,7 @@ Error: Could not fetch an OIDC token
 ```
 
 **Solutions:**
+
 - Ensure GitHub Actions permissions include `id-token: write`
 - Regenerate OAuth token: `claude setup-token`
 - Check Secret names are correct: `CLAUDE_CODE_OAUTH_TOKEN_1`, `CLAUDE_CODE_OAUTH_TOKEN_2`
@@ -150,6 +153,7 @@ Error: Could not fetch an OIDC token
 #### 2. Session Reset Failure
 
 **Check steps:**
+
 1. Review Actions execution logs
 2. Confirm logs/ directory permissions
 3. Check git configuration is correct
