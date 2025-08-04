@@ -4,10 +4,11 @@ name: Claude Code Session Reset Scheduler
 # Based on ADR-001: Session reset scheduling to maximize productivity
 # 05:00 UTC+8 -> 21:00 UTC (previous day) -> Reset at 10:00 UTC+8 (morning work period)
 # 10:00 UTC+8 -> 02:00 UTC -> Reset at 15:00 UTC+8 (afternoon work period)
-# 17:00 UTC+8 -> 09:00 UTC -> Reset at 22:00 UTC+8 (evening work period)  
+# 17:00 UTC+8 -> 09:00 UTC -> Reset at 22:00 UTC+8 (evening work period)
 # 22:00 UTC+8 -> 14:00 UTC -> Reset at 03:00 UTC+8 next day (additional coverage)
 on:
   schedule:
+    # Execution times are in UTC, corresponding to Taipei time (UTC+8) at 05:00, 10:00, 17:00, 22:00
     - cron: '0 21,2,9,14 * * *'
   # Manual trigger for testing
   workflow_dispatch:
@@ -23,6 +24,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        # Use a token for checkout, which is required for subsequent push actions
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
         
       - name: Configure Git
         run: |
@@ -33,81 +37,51 @@ jobs:
         uses: anthropics/claude-code-action@beta
         continue-on-error: true
         with:
-          # Use agent mode for automated, non-interactive task
           mode: agent
-          
-          # Authentication using Claude Code OAuth token 1
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_1 }}
-          
-          # Direct prompt with check-in instructions - ONLY file operations
           direct_prompt: |
             Execute Claude Code Session reset trigger for Token 1:
-            
             1. Get the current UTC time and determine today's date.
-            
             2. Based on the current date, determine the log filename in the format 'YYYYMM-session-log.csv'. 
                For example, if today is August 2024, the filename should be '202408-session-log.csv'.
-            
-            3. Check if this CSV file exists in the repository root:
-               - If the file does not exist, create it and write the header row: 'timestamp,event_type,token_id,reset_time_utc8'
-               - If the file exists, read its current contents to understand the structure
-            
-            4. Calculate the expected session reset time (current time + 5 hours, converted to UTC+8)
-            
-            5. Append a new row to the CSV file with:
-               - Current UTC timestamp in ISO 8601 format (e.g., '2024-08-04T02:00:15Z')
-               - Event type: 'SESSION-RESET-TRIGGER'
-               - Token identifier: 'TOKEN_1'
-               - Expected reset time in UTC+8 (e.g., '2024-08-04T15:00:15')
-               - Example row: '2024-08-04T02:00:15Z,SESSION-RESET-TRIGGER,TOKEN_1,2024-08-04T15:00:15'
-            
-            IMPORTANT: Only perform file operations. Do NOT run any git commands (git add, git commit, git push).
-            This action triggers the 5-hour Claude Code session reset countdown.
-            
+            3. Check if this CSV file exists. If not, create it with the header: 'timestamp,event_type,token_id,reset_time_utc8'.
+            4. Calculate the expected session reset time (current time + 5 hours, converted to UTC+8).
+            5. Append a new row to the CSV file with: current UTC timestamp, 'SESSION-RESET-TRIGGER', 'TOKEN_1', and the expected UTC+8 reset time.
+            IMPORTANT: Only perform file operations. Do NOT run any git commands.
+
       - name: Execute Session Reset Logic (Token 2)
         uses: anthropics/claude-code-action@beta
         continue-on-error: true
         with:
-          # Use agent mode for automated, non-interactive task
           mode: agent
-          
-          # Authentication using Claude Code OAuth token 2
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
-          
-          # Direct prompt with check-in instructions - ONLY file operations
           direct_prompt: |
             Execute Claude Code Session reset trigger for Token 2:
-            
             1. Get the current UTC time and determine today's date.
+            2. Based on the current date, determine the log filename in the format 'YYYYMM-session-log.csv'.
+            3. Check if this CSV file exists. If not, create it with the header: 'timestamp,event_type,token_id,reset_time_utc8'.
+            4. Calculate the expected session reset time (current time + 5 hours, converted to UTC+8).
+            5. Append a new row to the CSV file with: current UTC timestamp, 'SESSION-RESET-TRIGGER', 'TOKEN_2', and the expected UTC+8 reset time.
+            IMPORTANT: Only perform file operations. Do NOT run any git commands.
             
-            2. Based on the current date, determine the log filename in the format 'YYYYMM-session-log.csv'. 
-               For example, if today is August 2024, the filename should be '202408-session-log.csv'.
-            
-            3. Check if this CSV file exists in the repository root:
-               - If the file does not exist, create it and write the header row: 'timestamp,event_type,token_id,reset_time_utc8'
-               - If the file exists, read its current contents to understand the structure
-            
-            4. Calculate the expected session reset time (current time + 5 hours, converted to UTC+8)
-            
-            5. Append a new row to the CSV file with:
-               - Current UTC timestamp in ISO 8601 format (e.g., '2024-08-04T02:00:15Z')
-               - Event type: 'SESSION-RESET-TRIGGER'
-               - Token identifier: 'TOKEN_2'
-               - Expected reset time in UTC+8 (e.g., '2024-08-04T15:00:15')
-               - Example row: '2024-08-04T02:00:15Z,SESSION-RESET-TRIGGER,TOKEN_2,2024-08-04T15:00:15'
-            
-            IMPORTANT: Only perform file operations. Do NOT run any git commands (git add, git commit, git push).
-            This action triggers the 5-hour Claude Code session reset countdown.
-            
-      - name: Add changes to git
+      - name: Pull, Commit, and Push changes
         run: |
+          # Set a rebase strategy for pull to handle potential race conditions
+          git config --global pull.rebase true
+          
+          # Pull the latest changes from the remote repository
+          git pull origin main
+          
+          # Add all modified CSV files to the staging area
           git add *.csv
           
-      - name: Commit changes
-        run: |
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          git commit -m "chore: Session reset trigger at $TIMESTAMP" || echo "No changes to commit"
-          
-      - name: Push changes
-        run: |
-          git push origin main
+          # Check if there are any actual file changes. If so, commit and push.
+          if ! git diff-index --quiet HEAD; then
+            echo "Changes detected. Committing and pushing..."
+            TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            git commit -m "chore(bot): Session reset trigger at $TIMESTAMP"
+            # Push the changes
+            git push origin main
+          else
+            echo "No changes to commit. Working tree clean."
+          fi

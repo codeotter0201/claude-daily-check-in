@@ -1,86 +1,86 @@
-# ADR-001: Claude Code Session 自動重置排程設計
+# ADR-001: Claude Code Session Automated Reset Schedule Design
 
-**狀態:** 已決議 (Decided)  
-**日期:** 2024-08-04  
-**決策者:** Development Team  
+**Status:** Decided  
+**Date:** 2024-08-04  
+**Decision Makers:** Development Team  
 
-## 背景 (Context)
+## Context
 
-團隊在固定的三個時段（08:00-12:00, 13:00-17:00, 20:00-00:00）高強度使用 Claude Code，並觀察到約 2 小時會觸及單一 Session 的用量上限，導致工作流程中斷。為解決此問題，我們需要設計一個自動化的 Session 重置機制，確保每個核心工作時段都能獲得一次新的 Session 額度，同時希望最大化全天的總可用額度。
+The team intensively uses Claude Code during three fixed periods (08:00-12:00, 13:00-17:00, 20:00-00:00) and has observed that the single Session usage limit is reached after approximately 2 hours, causing workflow interruptions. To solve this problem, we need to design an automated Session reset mechanism that ensures each core working period receives a new Session quota, while maximizing the total daily available quota.
 
-### 使用者需求分析
-- **主要工作時段:** `08:00-12:00`、`13:00-17:00`、`20:00-00:00` (UTC+8)
-- **使用模式:** 每個工作時段開始約 **2 小時**後，會達到 Session 使用上限
-- **核心目標:** 希望在每個工作時段中段（約 10:00, 15:00, 22:00）都能獲得一次 Session 重置
+### User Requirements Analysis
+- **Primary work periods:** `08:00-12:00`, `13:00-17:00`, `20:00-00:00` (UTC+8)
+- **Usage pattern:** Session usage limit is reached approximately **2 hours** after each work period begins
+- **Core objective:** Obtain Session reset during mid-work periods (around 10:00, 15:00, 22:00)
 
-### 技術限制
-- Claude Code 的 Session 在**首次觸發後的 5 小時**會自動重置
-- 因此，若想在 `T` 時間點重置，必須在 `T-5` 小時安排觸發
+### Technical Constraints
+- Claude Code Sessions automatically reset **5 hours after first trigger**
+- Therefore, to reset at time `T`, trigger must be scheduled at `T-5` hours
 
-## 決策 (Decision)
+## Decision
 
-我們決議設定 **四個** 自動觸發時間點，以啟動 Claude Code 的 5 小時重置倒數。此排程旨在精準地在每個工作時段中途提供新的 Session。
+We decided to set **four** automatic trigger time points to start Claude Code's 5-hour reset countdown. This schedule aims to precisely provide new Sessions during the middle of each work period.
 
-**最終採用的觸發時間點為:** 
-- `05:00 (UTC+8)` / `21:00 (UTC, 前一天)`
+**Final adopted trigger time points:** 
+- `05:00 (UTC+8)` / `21:00 (UTC, previous day)`
 - `10:00 (UTC+8)` / `02:00 (UTC)`  
 - `17:00 (UTC+8)` / `09:00 (UTC)`
 - `22:00 (UTC+8)` / `14:00 (UTC)`
 
-### 觸發與重置時間對應表
+### Trigger and Reset Time Mapping Table
 
-| 觸發時間 (UTC+8) | 觸發時間 (UTC) | 預期重置時間 (UTC+8) | 對應工作時段 |
+| Trigger Time (UTC+8) | Trigger Time (UTC) | Expected Reset Time (UTC+8) | Corresponding Work Period |
 |:---|:---|:---|:---|
-| **05:00** | **21:00 (前一天)** | **10:00** | 完美覆蓋**上午**工作時段 (08:00-12:00) |
-| **10:00** | **02:00** | **15:00** | 完美覆蓋**下午**工作時段 (13:00-17:00) |
-| **17:00** | **09:00** | **22:00** | 完美覆蓋**晚上**工作時段 (20:00-00:00) |
-| **22:00** | **14:00** | **次日 03:00** | 提供深夜至凌晨的額外用量 |
+| **05:00** | **21:00 (previous day)** | **10:00** | Perfect coverage for **morning** work period (08:00-12:00) |
+| **10:00** | **02:00** | **15:00** | Perfect coverage for **afternoon** work period (13:00-17:00) |
+| **17:00** | **09:00** | **22:00** | Perfect coverage for **evening** work period (20:00-00:00) |
+| **22:00** | **14:00** | **Next day 03:00** | Provides additional late night to early morning usage |
 
-### GitHub Actions Cron 設定
+### GitHub Actions Cron Configuration
 ```yaml
 schedule:
-  - cron: '0 21,2,9,14 * * *'  # UTC 時間
+  - cron: '0 21,2,9,14 * * *'  # UTC time
 ```
 
-## 影響與權衡 (Consequences)
+## Consequences
 
-### 正面影響
-- **提升生產力:** 完美解決了三個核心工作時段中的用量瓶頸，使用者無需手動等待或中斷思緒
-- **自動化與可預測性:** 排程完全自動化，重置時間點固定，讓團隊可以信賴並規劃工作
-- **最大化用量:** 透過第四個觸發點 (22:00)，增加了每日可用的 Session 總量，為非標準工作時間提供了額外支持
-- **負載分散:** 多個 OAuth token 同時執行，提供備援機制
+### Positive Impact
+- **Improved productivity:** Perfectly solves usage bottlenecks in three core work periods, users no longer need to wait manually or interrupt their thinking
+- **Automation & predictability:** Schedule is fully automated with fixed reset times, allowing team to rely on and plan work
+- **Maximized usage:** Through the fourth trigger point (22:00), increases total daily available Session quota, providing additional support for non-standard work hours
+- **Load distribution:** Multiple OAuth tokens execute simultaneously, providing backup mechanism
 
-### 權衡考量
-- `22:00` 觸發所對應的 `03:00` 重置時間點，不在定義的核心工作時段內。此決策的目的是為了**滿足四個時段的需求**並提供最大的使用彈性，而非直接對應某個工作區塊。此為可接受的權衡。
-- 從原本的"簽到系統"轉型為"Session 重置系統"，改變了系統的主要用途
+### Trade-off Considerations
+- The `22:00` trigger corresponds to `03:00` reset time, which is not within the defined core work periods. This decision aims to **meet four-period requirements** and provide maximum usage flexibility, rather than directly corresponding to a specific work block. This is an acceptable trade-off.
+- Transformation from original "check-in system" to "Session reset system" changes the system's primary purpose
 
-### 技術實作影響
-- 需要更新 GitHub Actions workflow 的 cron 排程
-- 需要更新文檔以反映新的用途和時間點
-- CSV 記錄將從"CHECK-IN"事件轉為"SESSION-RESET"事件
-- 保持多重 token 支援以確保備援機制
+### Technical Implementation Impact
+- Need to update GitHub Actions workflow cron schedule
+- Need to update documentation to reflect new purpose and time points
+- CSV records will change from "CHECK-IN" events to "SESSION-RESET" events
+- Maintain multiple token support to ensure backup mechanism
 
-## 替代方案 (Alternatives Considered)
+## Alternatives Considered
 
-1. **維持原有 5 次觸發時間:** 不符合工作時段的實際需求
-2. **只設定 3 個觸發點:** 無法提供第四個時段的額外用量
-3. **手動管理 Session 重置:** 不符合自動化目標
+1. **Maintain original 5 trigger times:** Does not meet actual work period requirements
+2. **Set only 3 trigger points:** Cannot provide additional quota for fourth period
+3. **Manual Session reset management:** Does not meet automation goals
 
-## 相關文件
+## Related Documents
 
-- [PRD.md](./PRD.md) - 產品需求文件
-- [README.md](./README.md) - 使用說明文件  
-- [.github/workflows/auto-checkin.yml](./.github/workflows/auto-checkin.yml) - GitHub Actions 工作流程
+- [PRD.md](./PRD.md) - Product Requirements Document
+- [README.md](./README.md) - Usage Documentation  
+- [.github/workflows/auto-checkin.yml](./.github/workflows/auto-checkin.yml) - GitHub Actions Workflow
 
-## 後續行動
+## Follow-up Actions
 
-- [ ] 更新 GitHub Actions workflow 檔案
-- [ ] 更新 README.md 說明文件
-- [ ] 更新 PRD.md 需求文件
-- [ ] 測試新的排程設定
-- [ ] 監控 Session 重置效果
+- [ ] Update GitHub Actions workflow file
+- [ ] Update README.md documentation
+- [ ] Update PRD.md requirements document
+- [ ] Test new schedule configuration
+- [ ] Monitor Session reset effects
 
 ---
 
-**最後更新:** 2024-08-04  
-**下次檢討:** 2024-09-04
+**Last Updated:** 2024-08-04  
+**Next Review:** 2024-09-04

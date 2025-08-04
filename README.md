@@ -1,61 +1,68 @@
 # Claude Code Session Reset Scheduler
 
-基於 ADR-001 決策的 Claude Code Session 自動重置排程系統。透過 GitHub Actions 在最佳時間點觸發 Claude Code，啟動 5 小時重置倒數，確保在核心工作時段獲得新的 Session 額度。
+An automated Claude Code Session reset scheduling system based on ADR-001 decision. Uses GitHub Actions to trigger Claude Code at optimal times, starting a 5-hour reset countdown to ensure new Session quotas during core working hours.
 
-## 🕐 Session 重置排程
+## 🕐 Session Reset Schedule
 
-每天自動執行 4 次 Session 重置觸發 (UTC+8)，針對三個核心工作時段優化：
+Automatically executes 4 session reset triggers daily (UTC+8), optimized for three core working periods:
 
-| 觸發時間 | 重置時間 | 目標工作時段 | 說明 |
+| Trigger Time | Reset Time | Target Work Period | Description |
 |:---|:---|:---|:---|
-| **05:00** | **10:00** | 08:00-12:00 | 上午工作時段中段重置 |
-| **10:00** | **15:00** | 13:00-17:00 | 下午工作時段中段重置 |
-| **17:00** | **22:00** | 20:00-00:00 | 晚上工作時段中段重置 |
-| **22:00** | **次日 03:00** | 深夜時段 | 額外用量覆蓋 |
+| **05:00** | **10:00** | 08:00-12:00 | Mid-morning work period reset |
+| **10:00** | **15:00** | 13:00-17:00 | Mid-afternoon work period reset |
+| **17:00** | **22:00** | 20:00-00:00 | Mid-evening work period reset |
+| **22:00** | **Next day 03:00** | Late night period | Additional usage coverage |
 
-## 🚀 設定步驟
+## 🚀 Setup Steps
 
-### 1. 取得 OAuth Token
+### 1. Get OAuth Token
+
 ```bash
 claude setup-token
 ```
-複製產生的 `oauth_token_...` 
 
-### 2. 設定 GitHub Secrets
-1. 進入儲存庫 **Settings** → **Secrets and variables** → **Actions**
-2. 新增 secrets (建議設定多個用於備援和負載分散):
+Copy the generated `oauth_token_...`
+
+### 2. Configure GitHub Secrets
+
+1. Go to repository **Settings** → **Secrets and variables** → **Actions**
+2. Add secrets (recommend setting multiple for backup and load distribution):
    - Name: `CLAUDE_CODE_OAUTH_TOKEN_1`
-   - Value: 你的第一個 OAuth token
-   - Name: `CLAUDE_CODE_OAUTH_TOKEN_2` (強烈建議)
-   - Value: 你的第二個 OAuth token
+   - Value: Your first OAuth token
+   - Name: `CLAUDE_CODE_OAUTH_TOKEN_2` (strongly recommended)
+   - Value: Your second OAuth token
 
-### 3. 部署
-推送此儲存庫到 GitHub，系統就會自動開始運作。
+### 3. Deploy
 
-## 🧪 測試
+Push this repository to GitHub, and the system will automatically start working.
 
-### GitHub 測試
-1. 進入 **Actions** 頁籤
-2. 選擇 "Claude Code Session Reset Scheduler" 工作流程
-3. 點擊 **Run workflow** 手動觸發測試
+## 🧪 Testing
 
-### 本地測試
-使用 Claude Code 在本地測試相同邏輯：
+### GitHub Testing
+
+1. Go to **Actions** tab
+2. Select "Claude Code Session Reset Scheduler" workflow
+3. Click **Run workflow** to manually trigger test
+
+### Local Testing
+
+Use Claude Code to test the same logic locally:
 
 ```bash
-claude --prompt "執行 Session 重置觸發：1) 取得UTC時間 2) 建立/更新當月YYYYMM-session-log.csv 3) 附加SESSION-RESET-TRIGGER記錄"
+claude --prompt "Execute Session reset trigger: 1) Get UTC time 2) Create/update current month YYYYMM-session-log.csv 3) Append SESSION-RESET-TRIGGER record"
 ```
 
-**注意**: 本地測試只會更新檔案，需手動執行 git 操作：
+**Note**: Local testing only updates files, manual git operations required:
+
 ```bash
 git add *.csv
 git commit -m "chore: Manual session reset trigger test"
 git push
 ```
 
-## 📊 資料格式
+## 📊 Data Format
 
-Session 重置記錄存在月度 CSV 檔案 (`YYYYMM-session-log.csv`):
+Session reset records are stored in monthly CSV files (`YYYYMM-session-log.csv`):
 
 ```csv
 timestamp,event_type,token_id,reset_time_utc8
@@ -63,156 +70,168 @@ timestamp,event_type,token_id,reset_time_utc8
 2024-08-04T09:00:12Z,SESSION-RESET-TRIGGER,TOKEN_2,2024-08-04T22:00:12
 ```
 
-## 🛠️ 運作原理
+## 🛠️ How It Works
 
-1. **GitHub Actions** 定時觸發 (每天 4 次，基於 ADR-001 決策)
-2. **多重 Claude Code Action** 同時執行 Session 重置觸發
-3. **5小時倒數啟動** 每次觸發啟動 Claude Code 5小時重置倒數 
-4. **智能時間安排** 確保重置時間點對應核心工作時段中段
-5. **Token 識別** 每個 token 獨立觸發並標記來源
-6. **GitHub Actions** 執行 git 操作 (add, commit, push)
-7. **版本控制** 自動記錄所有重置觸發變更
+1. **GitHub Actions** scheduled triggers (4 times daily, based on ADR-001 decision)
+2. **Multiple Claude Code Actions** execute session reset triggers simultaneously
+3. **5-hour countdown activation** Each trigger starts Claude Code 5-hour reset countdown
+4. **Smart time scheduling** Ensures reset times correspond to mid-core working periods
+5. **Token identification** Each token triggers independently and marks source
+6. **GitHub Actions** executes git operations (add, commit, push)
+7. **Version control** Automatically records all reset trigger changes
 
-## 📁 專案結構
+## 📁 Project Structure
 
 ```
 claude-session-reset/
 ├── .github/
 │   └── workflows/
-│       └── auto-checkin.yml            # GitHub Actions 工作流程
-├── logs/                               # Session 記錄目錄 (自動生成)
-│   ├── 202408-session-log.csv         # 月度 Session 重置記錄
+│       └── auto-checkin.yml            # GitHub Actions workflow
+├── logs/                               # Session log directory (auto-generated)
+│   ├── 202408-session-log.csv         # Monthly session reset records
 │   └── 202409-session-log.csv
-├── ADR-001-session-reset-schedule.md  # 架構決策記錄
-├── README.md                           # 專案說明
-├── API.md                              # API 文件
-└── PRD.md                              # 產品需求文件
+├── ADR-001-session-reset-schedule.md  # Architecture decision record
+├── README.md                           # Project documentation
+├── API.md                              # API documentation
+└── PRD.md                              # Product requirements document
 ```
 
-## 🔧 進階設定
+## 🔧 Advanced Configuration
 
-### 自訂重置時間
-根據 ADR-001 決策，當前最佳排程為：
+### Custom Reset Times
+
+Based on ADR-001 decision, current optimal schedule:
 
 ```yaml
 schedule:
-  - cron: '0 21,2,9,14 * * *'  # UTC 時間，對應工作時段優化
+  - cron: '0 21,2,9,14 * * *'  # UTC time, optimized for work periods
 ```
 
-如需調整，請參考 [ADR-001](./ADR-001-session-reset-schedule.md) 了解時間安排原理。
+For adjustments, refer to [ADR-001](./ADR-001-session-reset-schedule.md) to understand the timing principles.
 
-### 多重 Token 設定
-系統支援多個 Claude Code OAuth tokens 以提高可靠性：
+### Multiple Token Configuration
+
+System supports multiple Claude Code OAuth tokens for improved reliability:
 
 ```yaml
-# GitHub Secrets 設定
+# GitHub Secrets configuration
 CLAUDE_CODE_OAUTH_TOKEN_1=oauth_token_xxx...
 CLAUDE_CODE_OAUTH_TOKEN_2=oauth_token_yyy...
 ```
 
-**優點:**
-- **備援機制**: 單一 token 失效時其他 token 仍可運作
-- **負載分散**: 多個 token 同時簽到，提高成功率
-- **識別追蹤**: 每筆記錄標記 token 來源
+**Benefits:**
+- **Backup mechanism**: Other tokens continue working if one fails
+- **Load distribution**: Multiple tokens check in simultaneously, improving success rate
+- **Identification tracking**: Each record marks token source
 
-### 環境變數設定
-可在 GitHub Secrets 中設定額外變數：
-- `TIMEZONE`: 時區設定 (預設: Asia/Taipei)
-- `LOG_FORMAT`: 記錄格式 (預設: CSV)
+### Environment Variables
 
-## 🐛 故障排除
+Additional variables can be set in GitHub Secrets:
+- `TIMEZONE`: Timezone setting (default: Asia/Taipei)
+- `LOG_FORMAT`: Log format (default: CSV)
 
-### 常見問題
+## 🐛 Troubleshooting
 
-#### 1. OAuth Token 錯誤
+### Common Issues
+
+#### 1. OAuth Token Error
+
 ```
 Error: Could not fetch an OIDC token
 ```
-**解決方案:**
-- 確認 GitHub Actions 權限包含 `id-token: write`
-- 重新生成 OAuth token: `claude setup-token`
-- 檢查 Secret 名稱是否正確: `CLAUDE_CODE_OAUTH_TOKEN_1`, `CLAUDE_CODE_OAUTH_TOKEN_2`
-- 至少需要設定一個有效的 token
 
-#### 2. Session 重置失敗
-**檢查步驟:**
-1. 查看 Actions 執行記錄
-2. 確認 logs/ 目錄權限
-3. 檢查 git 設定是否正確
-4. 驗證 Claude Code Session 是否正確重置
+**Solutions:**
+- Ensure GitHub Actions permissions include `id-token: write`
+- Regenerate OAuth token: `claude setup-token`
+- Check Secret names are correct: `CLAUDE_CODE_OAUTH_TOKEN_1`, `CLAUDE_CODE_OAUTH_TOKEN_2`
+- At least one valid token must be configured
 
-#### 3. 時間不正確
-- 檢查系統時區設定
-- GitHub Actions 使用 UTC 時間
-- 本地測試時注意時區轉換
+#### 2. Session Reset Failure
 
-### 偵錯指令
+**Check steps:**
+1. Review Actions execution logs
+2. Confirm logs/ directory permissions
+3. Check git configuration is correct
+4. Verify Claude Code Session resets properly
+
+#### 3. Incorrect Time
+
+- Check system timezone settings
+- GitHub Actions uses UTC time
+- Be aware of timezone conversion during local testing
+
+### Debug Commands
 
 ```bash
-# 檢查 Claude 狀態
+# Check Claude status
 claude --version
 
-# 測試 OAuth 連線
+# Test OAuth connection
 claude auth status
 
-# 手動執行 Session 重置觸發
-claude --prompt "執行測試 Session 重置觸發並顯示詳細記錄"
+# Manually execute Session reset trigger
+claude --prompt "Execute test Session reset trigger and show detailed logs"
 
-# 檢查 Session 狀態
+# Check Session status
 claude session status
 ```
 
-## 📈 監控與維護
+## 📈 Monitoring & Maintenance
 
-### 檢查執行狀態
-1. **GitHub Actions**: 查看工作流程執行歷史
-2. **CSV 檔案**: 確認每月 Session 重置記錄完整性
-3. **Commit 歷史**: 檢查自動提交狀況
-4. **Session 效果**: 監控實際工作時段的 Session 可用性
+### Check Execution Status
 
-### 定期維護
-- 每月檢查 CSV 檔案格式
-- 清理舊的執行記錄
-- 更新 OAuth token (依需要)
-- 檢討 Session 重置效果並調整時間安排
-- 定期檢視 ADR-001 決策的有效性
+1. **GitHub Actions**: Review workflow execution history
+2. **CSV Files**: Confirm monthly session reset record integrity
+3. **Commit History**: Check automatic commit status
+4. **Session Effects**: Monitor actual work period session availability
 
-## 🔒 安全注意事項
+### Regular Maintenance
 
-- **永不** 在程式碼中硬編碼 token
-- 定期輪換 OAuth token
-- 使用 GitHub Secrets 儲存敏感資訊
-- 限制儲存庫存取權限
+- Monthly CSV file format checks
+- Clean old execution logs
+- Update OAuth tokens (as needed)
+- Review session reset effects and adjust timing
+- Regularly review ADR-001 decision effectiveness
 
-## 🤝 貢獻指南
+## 🔒 Security Considerations
 
-1. Fork 此儲存庫
-2. 創建功能分支: `git checkout -b feature/new-feature`
-3. 提交變更: `git commit -m 'Add new feature'`
-4. 推送分支: `git push origin feature/new-feature`
-5. 提交 Pull Request
+- **Never** hardcode tokens in code
+- Regularly rotate OAuth tokens
+- Use GitHub Secrets for sensitive information
+- Restrict repository access permissions
 
-## 📝 版本紀錄
+## 🤝 Contributing
+
+1. Fork this repository
+2. Create feature branch: `git checkout -b feature/new-feature`
+3. Commit changes: `git commit -m 'Add new feature'`
+4. Push branch: `git push origin feature/new-feature`
+5. Submit Pull Request
+
+## 📝 Version History
 
 ### v2.0.0
-- 重新定位為 Claude Code Session 重置系統
-- 基於 ADR-001 的最佳化時間排程
-- 針對核心工作時段的智能重置
-- 新增 reset_time_utc8 欄位追蹤
-- 更新檔案命名規則 (session-log.csv)
+
+- Repositioned as Claude Code Session reset system
+- Optimized time scheduling based on ADR-001
+- Smart reset for core work periods
+- Added reset_time_utc8 field tracking
+- Updated file naming convention (session-log.csv)
 
 ### v1.1.0
-- 多重 OAuth token 支援
-- Token 識別追蹤功能
-- 備援機制改善
+
+- Multiple OAuth token support
+- Token identification tracking feature
+- Improved backup mechanism
 
 ### v1.0.0
-- 基本自動簽到功能
-- CSV 記錄格式
-- GitHub Actions 整合
+
+- Basic auto check-in functionality
+- CSV log format
+- GitHub Actions integration
 
 ---
 
-**重點**: 基於 ADR-001 決策，這是一個針對 Claude Code Session 重置優化的自動化系統，確保在核心工作時段獲得最佳的 Session 可用性。
+**Key Point**: Based on ADR-001 decision, this is an automated system optimized for Claude Code Session resets, ensuring optimal Session availability during core working hours.
 
-**技術支援**: 如遇問題請查看 [Issues](../../issues) 頁面或提交新問題。
+**Technical Support**: For issues, please check the [Issues](../../issues) page or submit new issues.
