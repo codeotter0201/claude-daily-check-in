@@ -32,7 +32,7 @@ jobs:
       - name: Execute Daily Check-in Logic (Token 1)
         uses: anthropics/claude-code-action@beta
         continue-on-error: true
-        if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_1 != '' }}
+        if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_1 }}
         with:
           # Use agent mode for automated, non-interactive task
           mode: agent
@@ -65,7 +65,7 @@ jobs:
       - name: Execute Daily Check-in Logic (Token 2)
         uses: anthropics/claude-code-action@beta
         continue-on-error: true
-        if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' }}
+        if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
         with:
           # Use agent mode for automated, non-interactive task
           mode: agent
