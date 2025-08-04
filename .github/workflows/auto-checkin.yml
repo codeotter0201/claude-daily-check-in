@@ -1,0 +1,53 @@
+name: Automated Daily Check-in
+
+# Scheduled execution at 5 specific times per day (UTC+8 converted to UTC)
+# 08:00 UTC+8 -> 00:00 UTC
+# 13:00 UTC+8 -> 05:00 UTC  
+# 18:00 UTC+8 -> 10:00 UTC
+# 23:00 UTC+8 -> 15:00 UTC
+# 04:00 UTC+8 -> 20:00 UTC (previous day)
+on:
+  schedule:
+    - cron: '0 0,5,10,15,20 * * *'
+  # Manual trigger for testing
+  workflow_dispatch:
+
+jobs:
+  automated-checkin:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Execute Daily Check-in
+        uses: anthropics/claude-code-action@beta
+        with:
+          # Use agent mode for automated, non-interactive task
+          mode: agent
+          
+          # Authentication using Claude Code OAuth token
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          
+          # Direct prompt with check-in instructions
+          direct_prompt: |
+            Execute the automated daily check-in process:
+            
+            1. Get the current UTC time and determine today's date.
+            
+            2. Based on the current date, determine the log filename in the format 'YYYYMM-log.csv'. 
+               For example, if today is October 2023, the filename should be '202310-log.csv'.
+            
+            3. Check if this CSV file exists in the repository root:
+               - If the file does not exist, create it and write the header row: 'timestamp,event_type'
+               - If the file exists, read its current contents
+            
+            4. Append a new row to the CSV file with:
+               - Current UTC timestamp in ISO 8601 format (e.g., '2023-10-27T08:00:15Z')
+               - Event type: 'CHECK-IN'
+               - Example row: '2023-10-27T08:00:15Z,CHECK-IN'
+            
+            5. Commit the changes to the repository with a descriptive commit message:
+               - Format: 'chore: Automated check-in at [current UTC timestamp]'
+               - Example: 'chore: Automated check-in at 2023-10-27T08:00:15Z'
+            
+            6. Push the commit to the main branch.
+            
+            Please execute these steps in order and confirm completion of each step.
