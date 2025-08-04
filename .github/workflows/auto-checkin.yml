@@ -33,6 +33,14 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
         
+      - name: Pull latest changes
+        run: |
+          # Set a rebase strategy for pull to handle potential race conditions
+          git config --global pull.rebase true
+          
+          # Pull the latest changes from the remote repository
+          git pull origin main
+        
       - name: Execute Session Reset Logic (Token 1)
         uses: anthropics/claude-code-action@beta
         continue-on-error: true
@@ -64,14 +72,8 @@ jobs:
             5. Append a new row to the CSV file with: current UTC timestamp, 'SESSION-RESET-TRIGGER', 'TOKEN_2', and the expected UTC+8 reset time.
             IMPORTANT: Only perform file operations. Do NOT run any git commands.
             
-      - name: Pull, Commit, and Push changes
+      - name: Commit and Push changes
         run: |
-          # Set a rebase strategy for pull to handle potential race conditions
-          git config --global pull.rebase true
-          
-          # Pull the latest changes from the remote repository
-          git pull origin main
-          
           # Add all modified CSV files to the staging area
           git add *.csv
           
