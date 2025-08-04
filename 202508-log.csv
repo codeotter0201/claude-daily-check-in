@@ -1,0 +1,3 @@
+timestamp,event_type,token_id
+2025-08-04T04:37:18Z,CHECK-IN,TOKEN_1
+2025-08-04T04:38:00Z,CHECK-IN,TOKEN_2
