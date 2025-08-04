@@ -1,19 +1,19 @@
-name: Automated Daily Check-in
+name: Claude Code Session Reset Scheduler
 
-# Scheduled execution at 5 specific times per day (UTC+8 converted to UTC)
-# 08:00 UTC+8 -> 00:00 UTC
-# 13:00 UTC+8 -> 05:00 UTC  
-# 18:00 UTC+8 -> 10:00 UTC
-# 23:00 UTC+8 -> 15:00 UTC
-# 04:00 UTC+8 -> 20:00 UTC (previous day)
+# Claude Code Session Reset Scheduler - Optimized for work periods
+# Based on ADR-001: Session reset scheduling to maximize productivity
+# 05:00 UTC+8 -> 21:00 UTC (previous day) -> Reset at 10:00 UTC+8 (morning work period)
+# 10:00 UTC+8 -> 02:00 UTC -> Reset at 15:00 UTC+8 (afternoon work period)
+# 17:00 UTC+8 -> 09:00 UTC -> Reset at 22:00 UTC+8 (evening work period)  
+# 22:00 UTC+8 -> 14:00 UTC -> Reset at 03:00 UTC+8 next day (additional coverage)
 on:
   schedule:
-    - cron: '0 0,5,10,15,20 * * *'
+    - cron: '0 21,2,9,14 * * *'
   # Manual trigger for testing
   workflow_dispatch:
 
 jobs:
-  automated-checkin:
+  session-reset:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -29,7 +29,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
         
-      - name: Execute Daily Check-in Logic (Token 1)
+      - name: Execute Session Reset Logic (Token 1)
         uses: anthropics/claude-code-action@beta
         continue-on-error: true
         with:
@@ -41,27 +41,30 @@ jobs:
           
           # Direct prompt with check-in instructions - ONLY file operations
           direct_prompt: |
-            Execute the automated daily check-in file operations for Token 1:
+            Execute Claude Code Session reset trigger for Token 1:
             
             1. Get the current UTC time and determine today's date.
             
-            2. Based on the current date, determine the log filename in the format 'YYYYMM-log.csv'. 
-               For example, if today is August 2024, the filename should be '202408-log.csv'.
+            2. Based on the current date, determine the log filename in the format 'YYYYMM-session-log.csv'. 
+               For example, if today is August 2024, the filename should be '202408-session-log.csv'.
             
             3. Check if this CSV file exists in the repository root:
-               - If the file does not exist, create it and write the header row: 'timestamp,event_type,token_id'
+               - If the file does not exist, create it and write the header row: 'timestamp,event_type,token_id,reset_time_utc8'
                - If the file exists, read its current contents to understand the structure
             
-            4. Append a new row to the CSV file with:
-               - Current UTC timestamp in ISO 8601 format (e.g., '2024-08-04T05:00:15Z')
-               - Event type: 'CHECK-IN'
+            4. Calculate the expected session reset time (current time + 5 hours, converted to UTC+8)
+            
+            5. Append a new row to the CSV file with:
+               - Current UTC timestamp in ISO 8601 format (e.g., '2024-08-04T02:00:15Z')
+               - Event type: 'SESSION-RESET-TRIGGER'
                - Token identifier: 'TOKEN_1'
-               - Example row: '2024-08-04T05:00:15Z,CHECK-IN,TOKEN_1'
+               - Expected reset time in UTC+8 (e.g., '2024-08-04T15:00:15')
+               - Example row: '2024-08-04T02:00:15Z,SESSION-RESET-TRIGGER,TOKEN_1,2024-08-04T15:00:15'
             
             IMPORTANT: Only perform file operations. Do NOT run any git commands (git add, git commit, git push).
-            Just create/update the CSV file with the check-in record.
+            This action triggers the 5-hour Claude Code session reset countdown.
             
-      - name: Execute Daily Check-in Logic (Token 2)
+      - name: Execute Session Reset Logic (Token 2)
         uses: anthropics/claude-code-action@beta
         continue-on-error: true
         with:
@@ -73,25 +76,28 @@ jobs:
           
           # Direct prompt with check-in instructions - ONLY file operations
           direct_prompt: |
-            Execute the automated daily check-in file operations for Token 2:
+            Execute Claude Code Session reset trigger for Token 2:
             
             1. Get the current UTC time and determine today's date.
             
-            2. Based on the current date, determine the log filename in the format 'YYYYMM-log.csv'. 
-               For example, if today is August 2024, the filename should be '202408-log.csv'.
+            2. Based on the current date, determine the log filename in the format 'YYYYMM-session-log.csv'. 
+               For example, if today is August 2024, the filename should be '202408-session-log.csv'.
             
             3. Check if this CSV file exists in the repository root:
-               - If the file does not exist, create it and write the header row: 'timestamp,event_type,token_id'
+               - If the file does not exist, create it and write the header row: 'timestamp,event_type,token_id,reset_time_utc8'
                - If the file exists, read its current contents to understand the structure
             
-            4. Append a new row to the CSV file with:
-               - Current UTC timestamp in ISO 8601 format (e.g., '2024-08-04T05:00:15Z')
-               - Event type: 'CHECK-IN'
+            4. Calculate the expected session reset time (current time + 5 hours, converted to UTC+8)
+            
+            5. Append a new row to the CSV file with:
+               - Current UTC timestamp in ISO 8601 format (e.g., '2024-08-04T02:00:15Z')
+               - Event type: 'SESSION-RESET-TRIGGER'
                - Token identifier: 'TOKEN_2'
-               - Example row: '2024-08-04T05:00:15Z,CHECK-IN,TOKEN_2'
+               - Expected reset time in UTC+8 (e.g., '2024-08-04T15:00:15')
+               - Example row: '2024-08-04T02:00:15Z,SESSION-RESET-TRIGGER,TOKEN_2,2024-08-04T15:00:15'
             
             IMPORTANT: Only perform file operations. Do NOT run any git commands (git add, git commit, git push).
-            Just create/update the CSV file with the check-in record.
+            This action triggers the 5-hour Claude Code session reset countdown.
             
       - name: Add changes to git
         run: |
@@ -100,7 +106,7 @@ jobs:
       - name: Commit changes
         run: |
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          git commit -m "chore: Automated check-in at $TIMESTAMP" || echo "No changes to commit"
+          git commit -m "chore: Session reset trigger at $TIMESTAMP" || echo "No changes to commit"
           
       - name: Push changes
         run: |

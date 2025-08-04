@@ -83,6 +83,13 @@ The following features are explicitly **not** included in this project:
 - Logging complex attendance states (e.g., leave, overtime, vacation).
 - Generation of timesheets or statistical reports.
 - A graphical user interface (UI).
-- Any event types other than `CHECK-IN`.
+- Any event types other than `SESSION-RESET-TRIGGER`.
+- Direct Claude Code session monitoring (the system only triggers resets).
+
+### 7. References
+
+- [ADR-001: Session Reset Scheduling](./ADR-001-session-reset-schedule.md) - Architecture decision record for the optimized scheduling approach
+- Core work periods: 08:00-12:00, 13:00-17:00, 20:00-00:00 (UTC+8)
+- Claude Code session reset behavior: 5-hour countdown from first trigger
 
 ---
