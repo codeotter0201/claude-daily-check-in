@@ -15,6 +15,10 @@ on:
 jobs:
   automated-checkin:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
     
     steps:
       - name: Execute Daily Check-in
