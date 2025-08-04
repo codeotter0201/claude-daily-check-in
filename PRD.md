@@ -22,7 +22,7 @@ This project aims to build a fully automated, scheduled daily check-in system. T
 | **FR-1** | **Scheduled Trigger**<br>The system must execute automatically at five specified times each day. The target times are: `08:00`, `13:00`, `18:00`, `23:00`, and `04:00` (in UTC+8 timezone).<br>_(Technical Note: The GitHub Actions cron schedule will be configured using UTC.)_                                           | High     |
 | **FR-2** | **Log File Management**<br>1. Check-in records must be stored in a CSV file.<br>2. The file must follow the naming convention `YYYYMM-log.csv` (e.g., `202310-log.csv`).<br>3. The system must automatically identify the correct file for the current month. If the file does not exist, it must be created automatically. | High     |
 | **FR-3** | **Data Logging**<br>1. On each run, Claude must read the current month's CSV file and append a new row for the check-in record.<br>2. The CSV columns must be: `timestamp`, `event_type`.<br>3. Example row: `2023-10-27T08:00:15Z,CHECK-IN`. The timestamp must be in ISO 8601 UTC format to prevent timezone ambiguity.   | High     |
-| **FR-4** | **Version Control Integration**<br>1. After updating the CSV file, the system must automatically commit and push the changes to the `main` (or specified) branch of the repository.<br>2. The commit message should be descriptive, e.g., `chore: Automated check-in at 2023-10-27 08:00`.                                  | High     |
+| **FR-4** | **Version Control Integration**<br>1. After Claude updates the CSV file, GitHub Actions must automatically add, commit and push the changes to the `main` branch.<br>2. The commit message should be descriptive, e.g., `chore: Automated check-in at 2023-10-27T08:00:15Z`.                                  | High     |
 | **FR-5** | **Authentication**<br>The system must use a `CLAUDE_CODE_OAUTH_TOKEN` stored in GitHub Secrets to authenticate the Claude Code Action.                                                                                                                                                                                      | High     |
 
 ### 4. Non-Functional Requirements
@@ -54,15 +54,24 @@ This project aims to build a fully automated, scheduled daily check-in system. T
     - Set `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`.
     - Use the `direct_prompt` input to provide clear instructions to Claude.
 
-4.  **Design Prompt Instruction**:
-    The `direct_prompt` will contain the following instructions:
+4.  **Design Separation of Concerns**:
+    - **Claude Code Action**: Handles only file operations (read/write CSV files)
+    - **GitHub Actions**: Handles all git operations (add, commit, push)
+    
+    The `direct_prompt` will contain the following instructions for Claude:
     ```
     1. Get the current UTC time.
-    2. Based on the current date, determine the log filename in the format 'YYYYMM-log.csv'. For example, if today is October 2023, the filename is '202310-log.csv'.
+    2. Based on the current date, determine the log filename in the format 'YYYYMM-log.csv'.
     3. Check if this file exists. If it does not, create it and write the header 'timestamp,event_type'.
-    4. Append a new line to the file. The line should contain the current UTC timestamp in ISO 8601 format, followed by a comma, and the string 'CHECK-IN'.
-    5. Commit the changes to the repository with the commit message 'chore: Automated check-in at [current UTC time]'.
-    6. Push the commit to the main branch.
+    4. Append a new line to the file with current UTC timestamp in ISO 8601 format and 'CHECK-IN'.
+    IMPORTANT: Only perform file operations. Do NOT run git commands.
+    ```
+    
+    GitHub Actions will then handle:
+    ```
+    1. git add *.csv
+    2. git commit -m "chore: Automated check-in at [timestamp]"
+    3. git push origin main
     ```
 
 ### 6. Out of Scope

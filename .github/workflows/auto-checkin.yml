@@ -21,7 +21,15 @@ jobs:
       pull-requests: write
     
     steps:
-      - name: Execute Daily Check-in
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+        
+      - name: Execute Daily Check-in Logic
         uses: anthropics/claude-code-action@beta
         with:
           # Use agent mode for automated, non-interactive task
@@ -30,28 +38,36 @@ jobs:
           # Authentication using Claude Code OAuth token
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           
-          # Direct prompt with check-in instructions
+          # Direct prompt with check-in instructions - ONLY file operations
           direct_prompt: |
-            Execute the automated daily check-in process:
+            Execute the automated daily check-in file operations:
             
             1. Get the current UTC time and determine today's date.
             
             2. Based on the current date, determine the log filename in the format 'YYYYMM-log.csv'. 
-               For example, if today is October 2023, the filename should be '202310-log.csv'.
+               For example, if today is August 2024, the filename should be '202408-log.csv'.
             
             3. Check if this CSV file exists in the repository root:
                - If the file does not exist, create it and write the header row: 'timestamp,event_type'
-               - If the file exists, read its current contents
+               - If the file exists, read its current contents to understand the structure
             
             4. Append a new row to the CSV file with:
-               - Current UTC timestamp in ISO 8601 format (e.g., '2023-10-27T08:00:15Z')
+               - Current UTC timestamp in ISO 8601 format (e.g., '2024-08-04T05:00:15Z')
                - Event type: 'CHECK-IN'
-               - Example row: '2023-10-27T08:00:15Z,CHECK-IN'
+               - Example row: '2024-08-04T05:00:15Z,CHECK-IN'
             
-            5. Commit the changes to the repository with a descriptive commit message:
-               - Format: 'chore: Automated check-in at [current UTC timestamp]'
-               - Example: 'chore: Automated check-in at 2023-10-27T08:00:15Z'
+            IMPORTANT: Only perform file operations. Do NOT run any git commands (git add, git commit, git push).
+            Just create/update the CSV file with the check-in record.
             
-            6. Push the commit to the main branch.
-            
-            Please execute these steps in order and confirm completion of each step.
+      - name: Add changes to git
+        run: |
+          git add *.csv
+          
+      - name: Commit changes
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          git commit -m "chore: Automated check-in at $TIMESTAMP" || echo "No changes to commit"
+          
+      - name: Push changes
+        run: |
+          git push origin main
