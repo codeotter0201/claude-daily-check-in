@@ -1,6 +1,6 @@
 # Claude Code Session Reset Scheduler
 
-An automated Claude Code Session reset scheduling system based on ADR-001 decision. Uses GitHub Actions to trigger Claude Code at optimal times, starting a 5-hour reset countdown to ensure new Session quotas during core working hours.
+An automated Claude Code Session reset scheduling system based on ADR-001 and ADR-002 decisions. Uses GitHub Actions to trigger Claude Code at optimal times with reliability-optimized scheduling, starting a 5-hour reset countdown to ensure new Session quotas during core working hours.
 
 ## 🕐 Session Reset Schedule
 
@@ -8,10 +8,10 @@ Automatically executes 4 session reset triggers daily (UTC+8), optimized for thr
 
 | Trigger Time | Reset Time | Target Work Period | Description |
 |:---|:---|:---|:---|
-| **05:00** | **10:00** | 08:00-12:00 | Mid-morning work period reset |
-| **10:00** | **15:00** | 13:00-17:00 | Mid-afternoon work period reset |
-| **17:00** | **22:00** | 20:00-00:00 | Mid-evening work period reset |
-| **22:00** | **Next day 03:00** | Late night period | Additional usage coverage |
+| **05:23** | **10:23** | 08:00-12:00 | Mid-morning work period reset |
+| **10:23** | **15:23** | 13:00-17:00 | Mid-afternoon work period reset |
+| **17:23** | **22:23** | 20:00-00:00 | Mid-evening work period reset |
+| **22:23** | **Next day 03:23** | Late night period | Additional usage coverage |
 
 ## 🚀 Setup Steps
 
@@ -66,8 +66,8 @@ Session reset records are stored in monthly CSV files (`YYYYMM-session-log.csv`)
 
 ```csv
 timestamp,event_type,token_id,reset_time_utc8
-2024-08-04T02:00:15Z,SESSION-RESET-TRIGGER,TOKEN_1,2024-08-04T15:00:15
-2024-08-04T09:00:12Z,SESSION-RESET-TRIGGER,TOKEN_2,2024-08-04T22:00:12
+2024-08-04T02:23:15Z,SESSION-RESET-TRIGGER,TOKEN_1,2024-08-04T15:23:15
+2024-08-04T09:23:12Z,SESSION-RESET-TRIGGER,TOKEN_2,2024-08-04T22:23:12
 ```
 
 ## 🛠️ How It Works
@@ -91,6 +91,7 @@ claude-session-reset/
 │   ├── 202408-session-log.csv         # Monthly session reset records
 │   └── 202409-session-log.csv
 ├── ADR-001-session-reset-schedule.md  # Architecture decision record
+├── ADR-002-github-actions-cron-timing-optimization.md  # Timing optimization ADR
 ├── README.md                           # Project documentation
 ├── API.md                              # API documentation
 └── PRD.md                              # Product requirements document
@@ -104,10 +105,10 @@ Based on ADR-001 decision, current optimal schedule:
 
 ```yaml
 schedule:
-  - cron: '0 21,2,9,14 * * *'  # UTC time, optimized for work periods
+  - cron: '23 21,2,9,14 * * *'  # UTC time, optimized for reliability and work periods
 ```
 
-For adjustments, refer to [ADR-001](./ADR-001-session-reset-schedule.md) to understand the timing principles.
+For adjustments, refer to [ADR-001](./ADR-001-session-reset-schedule.md) for timing principles and [ADR-002](./ADR-002-github-actions-cron-timing-optimization.md) for reliability optimization.
 
 ### Multiple Token Configuration
 
@@ -210,6 +211,13 @@ claude session status
 
 ## 📝 Version History
 
+### v2.1.0
+
+- Implemented ADR-002: GitHub Actions cron timing optimization
+- Changed trigger time from :00 to :23 minutes for improved reliability
+- Updated all timing references to reflect 23-minute offset
+- Enhanced documentation with reliability considerations
+
 ### v2.0.0
 
 - Repositioned as Claude Code Session reset system
@@ -232,6 +240,6 @@ claude session status
 
 ---
 
-**Key Point**: Based on ADR-001 decision, this is an automated system optimized for Claude Code Session resets, ensuring optimal Session availability during core working hours.
+**Key Point**: Based on ADR-001 and ADR-002 decisions, this is an automated system optimized for Claude Code Session resets with reliability-enhanced scheduling, ensuring optimal Session availability during core working hours.
 
 **Technical Support**: For issues, please check the [Issues](../../issues) page or submit new issues.

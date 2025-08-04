@@ -1,29 +1,31 @@
-## Automated Daily Check-in System: Product Requirements Document (PRD)
+## Claude Code Session Reset Scheduler: Product Requirements Document (PRD)
 
 | Version | Date       | Author | Change Description |
 | ------- | ---------- | ------ | ------------------ |
-| v1.0    | 2023-10-27 | Claude | Initial Draft      |
+| v3.0    | 2025-08-04 | Claude | Updated for session reset system with timing optimization |
+| v2.0    | 2024-08-04 | Claude | Transformed to session reset system per ADR-001 |
+| v1.0    | 2023-10-27 | Claude | Initial check-in system draft |
 
 ### 1. Project Overview
 
-This project aims to build a fully automated, scheduled daily check-in system. The system will leverage **GitHub Actions** as a scheduling trigger and the **Claude Code Action** to execute the core check-in logic. All check-in records will be stored in a CSV file within a designated GitHub repository, creating an unattended and automated attendance log.
+This project provides a fully automated Claude Code Session reset scheduling system. The system leverages **GitHub Actions** with reliability-optimized cron timing and **Claude Code Action** to execute session reset triggers. Based on ADR-001 and ADR-002 decisions, the system ensures optimal Session quota availability during core work periods through strategic 5-hour countdown triggers. All session reset records are stored in monthly CSV files within the GitHub repository.
 
 ### 2. Goals & Objectives
 
-- **Automation:** Completely eliminate the manual check-in process by automatically performing "check-in" actions at specified times.
-- **Reliability:** Ensure the system runs on time, every day, and logs information correctly and consistently.
-- **Traceability:** Maintain a clear and auditable history of all check-in activities, as each log entry will be a version-controlled commit in the GitHub repository.
-- **Simplicity:** Focus exclusively on the "check-in" function, avoiding unnecessary complexity from other features.
+- **Automated Session Management:** Eliminate manual Claude Code Session monitoring by automatically triggering resets at optimal times for core work periods.
+- **Reliability:** Ensure consistent execution through GitHub Actions cron timing optimization (minute 23) and multi-token backup mechanisms.
+- **Work Period Optimization:** Provide fresh Session quotas during mid-work periods (10:23, 15:23, 22:23 UTC+8) to prevent workflow interruptions.
+- **Traceability:** Maintain comprehensive session reset history through version-controlled CSV logs and commit tracking.
 
 ### 3. Functional Requirements
 
 | ID       | Requirement Description                                                                                                                                                                                                                                                                                                     | Priority |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| **FR-1** | **Scheduled Trigger**<br>The system must execute automatically at five specified times each day. The target times are: `08:00`, `13:00`, `18:00`, `23:00`, and `04:00` (in UTC+8 timezone).<br>_(Technical Note: The GitHub Actions cron schedule will be configured using UTC.)_                                           | High     |
-| **FR-2** | **Log File Management**<br>1. Check-in records must be stored in a CSV file.<br>2. The file must follow the naming convention `YYYYMM-log.csv` (e.g., `202310-log.csv`).<br>3. The system must automatically identify the correct file for the current month. If the file does not exist, it must be created automatically. | High     |
-| **FR-3** | **Data Logging**<br>1. On each run, Claude must read the current month's CSV file and append a new row for the check-in record.<br>2. The CSV columns must be: `timestamp`, `event_type`, `token_id`.<br>3. Example row: `2023-10-27T08:00:15Z,CHECK-IN,TOKEN_1`. The timestamp must be in ISO 8601 UTC format to prevent timezone ambiguity.   | High     |
-| **FR-4** | **Version Control Integration**<br>1. After Claude updates the CSV file, GitHub Actions must automatically add, commit and push the changes to the `main` branch.<br>2. The commit message should be descriptive, e.g., `chore: Automated check-in at 2023-10-27T08:00:15Z`.                                  | High     |
-| **FR-5** | **Authentication**<br>The system must support multiple Claude Code OAuth tokens for redundancy and load distribution. Tokens are stored with suffixes (e.g., `CLAUDE_CODE_OAUTH_TOKEN_1`, `CLAUDE_CODE_OAUTH_TOKEN_2`) in GitHub Secrets. Each available token will perform independent check-ins.                                                                                                                                                                                      | High     |
+| **FR-1** | **Scheduled Trigger**<br>The system must execute automatically at four specified times each day with reliability optimization. The target times are: `05:23`, `10:23`, `17:23`, `22:23` (in UTC+8 timezone) to trigger 5-hour countdowns.<br>_(Technical Note: Uses minute 23 per ADR-002 for improved GitHub Actions reliability.)_ | High     |
+| **FR-2** | **Log File Management**<br>1. Session reset records must be stored in monthly CSV files.<br>2. The file must follow the naming convention `YYYYMM-session-log.csv` (e.g., `202408-session-log.csv`).<br>3. The system must automatically identify the correct file for the current month. If the file does not exist, it must be created automatically. | High     |
+| **FR-3** | **Data Logging**<br>1. On each run, Claude must read the current month's CSV file and append a new row for the session reset trigger.<br>2. The CSV columns must be: `timestamp`, `event_type`, `token_id`, `reset_time_utc8`.<br>3. Example row: `2024-08-04T02:23:15Z,SESSION-RESET-TRIGGER,TOKEN_1,2024-08-04T15:23:15`. The timestamp must be in ISO 8601 UTC format. | High     |
+| **FR-4** | **Version Control Integration**<br>1. After Claude updates the CSV file, GitHub Actions must automatically add, commit and push the changes to the `main` branch.<br>2. The commit message should be descriptive, e.g., `chore(bot): Session reset trigger at 2024-08-04T02:23:15Z`.                        | High     |
+| **FR-5** | **Authentication**<br>The system must support multiple Claude Code OAuth tokens for redundancy and load distribution. Tokens are stored with suffixes (e.g., `CLAUDE_CODE_OAUTH_TOKEN_1`, `CLAUDE_CODE_OAUTH_TOKEN_2`) in GitHub Secrets. Each available token will perform independent session reset triggers. | High     |
 
 ### 4. Non-Functional Requirements
 
@@ -39,13 +41,12 @@ This project aims to build a fully automated, scheduled daily check-in system. T
 
 2.  **Configure Cron Trigger**:
 
-    - Use `on.schedule.cron` to define the daily execution schedule. The UTC+8 times must be converted to UTC for the cron job:
-      - `08:00 (UTC+8)` -> `00:00 (UTC)`
-      - `13:00 (UTC+8)` -> `05:00 (UTC)`
-      - `18:00 (UTC+8)` -> `10:00 (UTC)`
-      - `23:00 (UTC+8)` -> `15:00 (UTC)`
-      - `04:00 (UTC+8)` -> `20:00 (UTC)`
-    - The resulting cron expression will be: `'0 0,5,10,15,20 * * *'`
+    - Use `on.schedule.cron` to define the session reset trigger schedule. The UTC+8 times are converted to UTC with minute 23 optimization:
+      - `05:23 (UTC+8)` -> `21:23 (UTC, previous day)`
+      - `10:23 (UTC+8)` -> `02:23 (UTC)`
+      - `17:23 (UTC+8)` -> `09:23 (UTC)`
+      - `22:23 (UTC+8)` -> `14:23 (UTC)`
+    - The resulting cron expression will be: `'23 21,2,9,14 * * *'` (per ADR-002 timing optimization)
 
 3.  **Configure Claude Code Action**:
 
@@ -61,17 +62,18 @@ This project aims to build a fully automated, scheduled daily check-in system. T
     
     The `direct_prompt` will contain the following instructions for Claude:
     ```
-    1. Get the current UTC time.
-    2. Based on the current date, determine the log filename in the format 'YYYYMM-log.csv'.
-    3. Check if this file exists. If it does not, create it and write the header 'timestamp,event_type,token_id'.
-    4. Append a new line to the file with current UTC timestamp in ISO 8601 format, 'CHECK-IN', and token identifier (e.g., 'TOKEN_1').
+    1. Get the current UTC time and determine today's date.
+    2. Based on the current date, determine the log filename in the format 'YYYYMM-session-log.csv'.
+    3. Check if this file exists. If it does not, create it and write the header 'timestamp,event_type,token_id,reset_time_utc8'.
+    4. Calculate the expected session reset time (current time + 5 hours, converted to UTC+8).
+    5. Append a new line with: current UTC timestamp, 'SESSION-RESET-TRIGGER', token identifier, and expected UTC+8 reset time.
     IMPORTANT: Only perform file operations. Do NOT run git commands.
     ```
     
     GitHub Actions will then handle:
     ```
     1. git add *.csv
-    2. git commit -m "chore: Automated check-in at [timestamp]"
+    2. git commit -m "chore(bot): Session reset trigger at [timestamp]"
     3. git push origin main
     ```
 
@@ -79,17 +81,20 @@ This project aims to build a fully automated, scheduled daily check-in system. T
 
 The following features are explicitly **not** included in this project:
 
-- "Check-out" functionality.
-- Logging complex attendance states (e.g., leave, overtime, vacation).
-- Generation of timesheets or statistical reports.
+- Traditional check-in/check-out functionality.
+- Attendance tracking or timesheet generation.
+- Statistical reports or analytics dashboards.
 - A graphical user interface (UI).
 - Any event types other than `SESSION-RESET-TRIGGER`.
 - Direct Claude Code session monitoring (the system only triggers resets).
+- Real-time session status checking or alerts.
 
 ### 7. References
 
-- [ADR-001: Session Reset Scheduling](./ADR-001-session-reset-schedule.md) - Architecture decision record for the optimized scheduling approach
+- [ADR-001: Session Reset Scheduling](./ADR-001-session-reset-schedule.md) - Architecture decision record for work period optimization
+- [ADR-002: GitHub Actions Cron Timing Optimization](./ADR-002-github-actions-cron-timing-optimization.md) - Reliability enhancement decision
 - Core work periods: 08:00-12:00, 13:00-17:00, 20:00-00:00 (UTC+8)
 - Claude Code session reset behavior: 5-hour countdown from first trigger
+- Timing optimization: Minute 23 for improved GitHub Actions reliability
 
 ---
