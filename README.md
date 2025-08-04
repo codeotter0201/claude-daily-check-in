@@ -19,11 +19,13 @@ claude setup-token
 ```
 複製產生的 `oauth_token_...` 
 
-### 2. 設定 GitHub Secret
+### 2. 設定 GitHub Secrets
 1. 進入儲存庫 **Settings** → **Secrets and variables** → **Actions**
-2. 新增 secret: 
-   - Name: `CLAUDE_CODE_OAUTH_TOKEN`
-   - Value: 你的 OAuth token
+2. 新增 secrets (可設定多個用於備援):
+   - Name: `CLAUDE_CODE_OAUTH_TOKEN_1`
+   - Value: 你的第一個 OAuth token
+   - Name: `CLAUDE_CODE_OAUTH_TOKEN_2` (選用)
+   - Value: 你的第二個 OAuth token
 
 ### 3. 部署
 推送此儲存庫到 GitHub，系統就會自動開始運作。
@@ -54,17 +56,18 @@ git push
 簽到記錄存在月度 CSV 檔案 (`YYYYMM-log.csv`):
 
 ```csv
-timestamp,event_type
-2024-08-04T00:00:15Z,CHECK-IN
-2024-08-04T05:00:12Z,CHECK-IN
+timestamp,event_type,token_id
+2024-08-04T00:00:15Z,CHECK-IN,TOKEN_1
+2024-08-04T05:00:12Z,CHECK-IN,TOKEN_2
 ```
 
 ## 🛠️ 運作原理
 
 1. **GitHub Actions** 定時觸發 (每天 5 次)
-2. **Claude Code Action** 執行檔案操作 (建立/更新 CSV)
-3. **GitHub Actions** 執行 git 操作 (add, commit, push)
-4. **版本控制** 自動記錄所有簽到變更
+2. **多重 Claude Code Action** 同時執行檔案操作 (建立/更新 CSV)
+3. **Token 識別** 每個 token 獨立簽到並標記來源
+4. **GitHub Actions** 執行 git 操作 (add, commit, push)
+5. **版本控制** 自動記錄所有簽到變更
 
 ## 📁 專案結構
 
@@ -91,6 +94,20 @@ schedule:
   - cron: '0 0,5,10,15,23 * * *'  # 自訂時間 (UTC)
 ```
 
+### 多重 Token 設定
+系統支援多個 Claude Code OAuth tokens 以提高可靠性：
+
+```yaml
+# GitHub Secrets 設定
+CLAUDE_CODE_OAUTH_TOKEN_1=oauth_token_xxx...
+CLAUDE_CODE_OAUTH_TOKEN_2=oauth_token_yyy...
+```
+
+**優點:**
+- **備援機制**: 單一 token 失效時其他 token 仍可運作
+- **負載分散**: 多個 token 同時簽到，提高成功率
+- **識別追蹤**: 每筆記錄標記 token 來源
+
 ### 環境變數設定
 可在 GitHub Secrets 中設定額外變數：
 - `TIMEZONE`: 時區設定 (預設: Asia/Taipei)
@@ -107,7 +124,8 @@ Error: Could not fetch an OIDC token
 **解決方案:**
 - 確認 GitHub Actions 權限包含 `id-token: write`
 - 重新生成 OAuth token: `claude setup-token`
-- 檢查 Secret 名稱是否正確: `CLAUDE_CODE_OAUTH_TOKEN`
+- 檢查 Secret 名稱是否正確: `CLAUDE_CODE_OAUTH_TOKEN_1`, `CLAUDE_CODE_OAUTH_TOKEN_2`
+- 至少需要設定一個有效的 token
 
 #### 2. 簽到失敗
 **檢查步驟:**
@@ -161,6 +179,11 @@ claude --prompt "執行測試簽到並顯示詳細記錄"
 5. 提交 Pull Request
 
 ## 📝 版本紀錄
+
+### v1.1.0
+- 多重 OAuth token 支援
+- Token 識別追蹤功能
+- 備援機制改善
 
 ### v1.0.0
 - 基本自動簽到功能

@@ -21,15 +21,15 @@ This project aims to build a fully automated, scheduled daily check-in system. T
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | **FR-1** | **Scheduled Trigger**<br>The system must execute automatically at five specified times each day. The target times are: `08:00`, `13:00`, `18:00`, `23:00`, and `04:00` (in UTC+8 timezone).<br>_(Technical Note: The GitHub Actions cron schedule will be configured using UTC.)_                                           | High     |
 | **FR-2** | **Log File Management**<br>1. Check-in records must be stored in a CSV file.<br>2. The file must follow the naming convention `YYYYMM-log.csv` (e.g., `202310-log.csv`).<br>3. The system must automatically identify the correct file for the current month. If the file does not exist, it must be created automatically. | High     |
-| **FR-3** | **Data Logging**<br>1. On each run, Claude must read the current month's CSV file and append a new row for the check-in record.<br>2. The CSV columns must be: `timestamp`, `event_type`.<br>3. Example row: `2023-10-27T08:00:15Z,CHECK-IN`. The timestamp must be in ISO 8601 UTC format to prevent timezone ambiguity.   | High     |
+| **FR-3** | **Data Logging**<br>1. On each run, Claude must read the current month's CSV file and append a new row for the check-in record.<br>2. The CSV columns must be: `timestamp`, `event_type`, `token_id`.<br>3. Example row: `2023-10-27T08:00:15Z,CHECK-IN,TOKEN_1`. The timestamp must be in ISO 8601 UTC format to prevent timezone ambiguity.   | High     |
 | **FR-4** | **Version Control Integration**<br>1. After Claude updates the CSV file, GitHub Actions must automatically add, commit and push the changes to the `main` branch.<br>2. The commit message should be descriptive, e.g., `chore: Automated check-in at 2023-10-27T08:00:15Z`.                                  | High     |
-| **FR-5** | **Authentication**<br>The system must use a `CLAUDE_CODE_OAUTH_TOKEN` stored in GitHub Secrets to authenticate the Claude Code Action.                                                                                                                                                                                      | High     |
+| **FR-5** | **Authentication**<br>The system must support multiple Claude Code OAuth tokens for redundancy and load distribution. Tokens are stored with suffixes (e.g., `CLAUDE_CODE_OAUTH_TOKEN_1`, `CLAUDE_CODE_OAUTH_TOKEN_2`) in GitHub Secrets. Each available token will perform independent check-ins.                                                                                                                                                                                      | High     |
 
 ### 4. Non-Functional Requirements
 
 | ID        | Requirement Description                                                                                                                         |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **NFR-1** | **Security**<br>The `CLAUDE_CODE_OAUTH_TOKEN` must never be hard-coded in the workflow file and must always be referenced via GitHub Secrets.   |
+| **NFR-1** | **Security**<br>All `CLAUDE_CODE_OAUTH_TOKEN` variants must never be hard-coded in the workflow file and must always be referenced via GitHub Secrets.   |
 | **NFR-2** | **Maintainability**<br>The GitHub Actions workflow file (`.github/workflows/auto-checkin.yml`) should be well-commented for future maintenance. |
 | **NFR-3** | **Performance**<br>Each check-in action should complete within a few minutes to stay well within the execution limits of GitHub Actions.        |
 
@@ -51,7 +51,8 @@ This project aims to build a fully automated, scheduled daily check-in system. T
 
     - Use the action `anthropics/claude-code-action@beta`.
     - Set `mode: agent` for this automated, non-interactive task.
-    - Set `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`.
+    - Create separate steps for each token: `CLAUDE_CODE_OAUTH_TOKEN_1`, `CLAUDE_CODE_OAUTH_TOKEN_2`, etc.
+    - Use conditional execution to only run steps where tokens exist.
     - Use the `direct_prompt` input to provide clear instructions to Claude.
 
 4.  **Design Separation of Concerns**:
@@ -62,8 +63,8 @@ This project aims to build a fully automated, scheduled daily check-in system. T
     ```
     1. Get the current UTC time.
     2. Based on the current date, determine the log filename in the format 'YYYYMM-log.csv'.
-    3. Check if this file exists. If it does not, create it and write the header 'timestamp,event_type'.
-    4. Append a new line to the file with current UTC timestamp in ISO 8601 format and 'CHECK-IN'.
+    3. Check if this file exists. If it does not, create it and write the header 'timestamp,event_type,token_id'.
+    4. Append a new line to the file with current UTC timestamp in ISO 8601 format, 'CHECK-IN', and token identifier (e.g., 'TOKEN_1').
     IMPORTANT: Only perform file operations. Do NOT run git commands.
     ```
     

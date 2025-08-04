@@ -29,18 +29,20 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
         
-      - name: Execute Daily Check-in Logic
+      - name: Execute Daily Check-in Logic (Token 1)
         uses: anthropics/claude-code-action@beta
+        continue-on-error: true
+        if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_1 != '' }}
         with:
           # Use agent mode for automated, non-interactive task
           mode: agent
           
-          # Authentication using Claude Code OAuth token
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Authentication using Claude Code OAuth token 1
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_1 }}
           
           # Direct prompt with check-in instructions - ONLY file operations
           direct_prompt: |
-            Execute the automated daily check-in file operations:
+            Execute the automated daily check-in file operations for Token 1:
             
             1. Get the current UTC time and determine today's date.
             
@@ -48,13 +50,47 @@ jobs:
                For example, if today is August 2024, the filename should be '202408-log.csv'.
             
             3. Check if this CSV file exists in the repository root:
-               - If the file does not exist, create it and write the header row: 'timestamp,event_type'
+               - If the file does not exist, create it and write the header row: 'timestamp,event_type,token_id'
                - If the file exists, read its current contents to understand the structure
             
             4. Append a new row to the CSV file with:
                - Current UTC timestamp in ISO 8601 format (e.g., '2024-08-04T05:00:15Z')
                - Event type: 'CHECK-IN'
-               - Example row: '2024-08-04T05:00:15Z,CHECK-IN'
+               - Token identifier: 'TOKEN_1'
+               - Example row: '2024-08-04T05:00:15Z,CHECK-IN,TOKEN_1'
+            
+            IMPORTANT: Only perform file operations. Do NOT run any git commands (git add, git commit, git push).
+            Just create/update the CSV file with the check-in record.
+            
+      - name: Execute Daily Check-in Logic (Token 2)
+        uses: anthropics/claude-code-action@beta
+        continue-on-error: true
+        if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' }}
+        with:
+          # Use agent mode for automated, non-interactive task
+          mode: agent
+          
+          # Authentication using Claude Code OAuth token 2
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          
+          # Direct prompt with check-in instructions - ONLY file operations
+          direct_prompt: |
+            Execute the automated daily check-in file operations for Token 2:
+            
+            1. Get the current UTC time and determine today's date.
+            
+            2. Based on the current date, determine the log filename in the format 'YYYYMM-log.csv'. 
+               For example, if today is August 2024, the filename should be '202408-log.csv'.
+            
+            3. Check if this CSV file exists in the repository root:
+               - If the file does not exist, create it and write the header row: 'timestamp,event_type,token_id'
+               - If the file exists, read its current contents to understand the structure
+            
+            4. Append a new row to the CSV file with:
+               - Current UTC timestamp in ISO 8601 format (e.g., '2024-08-04T05:00:15Z')
+               - Event type: 'CHECK-IN'
+               - Token identifier: 'TOKEN_2'
+               - Example row: '2024-08-04T05:00:15Z,CHECK-IN,TOKEN_2'
             
             IMPORTANT: Only perform file operations. Do NOT run any git commands (git add, git commit, git push).
             Just create/update the CSV file with the check-in record.
