@@ -1,0 +1,13 @@
+version = 1
+revision = 1
+requires-python = ">=3.13"
+
+[[package]]
+name = "claude-daily-check-in"
+version = "2.2.0"
+source = { virtual = "." }
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = []

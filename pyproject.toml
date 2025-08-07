@@ -1,0 +1,9 @@
+[project]
+name = "claude-daily-check-in"
+version = "2.2.0"
+description = "Claude Code Session Reset Scheduler with Q&A health check"
+requires-python = ">=3.13"
+dependencies = []
+
+[tool.uv]
+dev-dependencies = []

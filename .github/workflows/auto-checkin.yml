@@ -1,7 +1,7 @@
 name: Claude Code Session Reset Scheduler
 
 # Claude Code Session Reset Scheduler - Optimized for work periods
-# Based on ADR-001 & ADR-002: Session reset scheduling with timing optimization
+# Based on ADR-001, ADR-002 & ADR-003: Session reset scheduling with timing optimization and Q&A health check
 # 05:23 UTC+8 -> 21:23 UTC (previous day) -> Reset at 10:23 UTC+8 (morning work period)
 # 10:23 UTC+8 -> 02:23 UTC -> Reset at 15:23 UTC+8 (afternoon work period)
 # 17:23 UTC+8 -> 09:23 UTC -> Reset at 22:23 UTC+8 (evening work period)
@@ -40,6 +40,11 @@ jobs:
           
           # Pull the latest changes from the remote repository
           git pull origin main
+      
+      - name: Setup Python with uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         
       - name: Execute Session Reset Logic (Token 1)
         uses: anthropics/claude-code-action@beta
@@ -48,14 +53,10 @@ jobs:
           mode: agent
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_1 }}
           direct_prompt: |
-            Execute Claude Code Session reset trigger for Token 1:
-            1. Get the current UTC time and determine today's date.
-            2. Based on the current date, determine the log filename in the format 'YYYYMM-session-log.csv'. 
-               For example, if today is August 2024, the filename should be '202408-session-log.csv'.
-            3. Check if this CSV file exists. If not, create it with the header: 'timestamp,event_type,token_id,reset_time_utc8'.
-            4. Calculate the expected session reset time (current time + 5 hours, converted to UTC+8).
-            5. Append a new row to the CSV file with: current UTC timestamp, 'SESSION-RESET-TRIGGER', 'TOKEN_1', and the expected UTC+8 reset time.
-            IMPORTANT: Only perform file operations. Do NOT run any git commands.
+            1+1=? # Answer should be 2. Do not answer anything else.
+      - name: Log Q&A Check (Token 1)
+        run: |
+          uv run --python 3.13 python src/log_qa_check.py --token "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_1 }}"
 
       - name: Execute Session Reset Logic (Token 2)
         uses: anthropics/claude-code-action@beta
@@ -64,18 +65,15 @@ jobs:
           mode: agent
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           direct_prompt: |
-            Execute Claude Code Session reset trigger for Token 2:
-            1. Get the current UTC time and determine today's date.
-            2. Based on the current date, determine the log filename in the format 'YYYYMM-session-log.csv'.
-            3. Check if this CSV file exists. If not, create it with the header: 'timestamp,event_type,token_id,reset_time_utc8'.
-            4. Calculate the expected session reset time (current time + 5 hours, converted to UTC+8).
-            5. Append a new row to the CSV file with: current UTC timestamp, 'SESSION-RESET-TRIGGER', 'TOKEN_2', and the expected UTC+8 reset time.
-            IMPORTANT: Only perform file operations. Do NOT run any git commands.
+            1+1=? # Answer should be 2. Do not answer anything else.
+      - name: Log Q&A Check (Token 2)
+        run: |
+          uv run --python 3.13 python src/log_qa_check.py --token "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}"
             
       - name: Commit and Push changes
         run: |
           # Add all modified CSV files to the staging area
-          git add *.csv
+          git add logs/*.csv
           
           # Check if there are any actual file changes. If so, commit and push.
           if ! git diff-index --quiet HEAD; then

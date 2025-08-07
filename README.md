@@ -1,6 +1,6 @@
 # Claude Code Session Reset Scheduler
 
-An automated Claude Code Session reset scheduling system based on ADR-001 and ADR-002 decisions. Uses GitHub Actions to trigger Claude Code at optimal times with reliability-optimized scheduling, starting a 5-hour reset countdown to ensure new Session quotas during core working hours.
+An automated Claude Code Session reset scheduling system based on ADR-001, ADR-002, and ADR-003 decisions. Uses GitHub Actions to trigger Claude Code at optimal times with reliability-optimized scheduling, starting a 5-hour reset countdown to ensure new Session quotas during core working hours. Includes a simple Q&A health check feature for basic functionality verification.
 
 ## 🕐 Session Reset Schedule
 
@@ -46,52 +46,103 @@ Push this repository to GitHub, and the system will automatically start working.
 
 ### Local Testing
 
-Use Claude Code to test the same logic locally:
+#### Method 1: Using Python Script Directly
+
+Test the Q&A logging functionality locally:
 
 ```bash
-claude --prompt "Execute Session reset trigger: 1) Get UTC time 2) Create/update current month YYYYMM-session-log.csv 3) Append SESSION-RESET-TRIGGER record"
+# Using uv (recommended)
+uv run --python 3.13 python src/log_qa_check.py --token TOKEN_1
+
+# Or using system Python
+python3 src/log_qa_check.py --token TOKEN_2
+```
+
+#### Method 2: Using Claude Code with Prompt
+
+Simulate the GitHub Actions workflow locally:
+
+```bash
+# Simple Q&A test
+claude -p "1+1=?"
+
+# Then run the logging script
+uv run --python 3.13 python src/log_qa_check.py --token TOKEN_1
+```
+
+#### Method 3: Complete Simulation
+
+Test the complete workflow locally:
+
+```bash
+# Step 1: Ask Claude the Q&A question
+claude -p "1+1=? # Answer should be 2. Do not answer anything else."
+
+# Step 2: Log the Q&A session reset trigger
+uv run --python 3.13 python src/log_qa_check.py --token TOKEN_1
+
+# Step 3: Check the generated CSV file
+cat logs/$(date +%Y%m)-session-log.csv
 ```
 
 **Note**: Local testing only updates files, manual git operations required:
 
 ```bash
-git add *.csv
-git commit -m "chore: Manual session reset trigger test"
+git add logs/*.csv
+git commit -m "chore: Manual Q&A session reset trigger test"
 git push
 ```
 
 ## 📊 Data Format
 
-Session reset records are stored in monthly CSV files (`YYYYMM-session-log.csv`):
+Session reset records are stored in monthly CSV files (`logs/YYYYMM-session-log.csv`):
 
 ```csv
 timestamp,event_type,token_id,reset_time_utc8
-2024-08-04T02:23:15Z,SESSION-RESET-TRIGGER,TOKEN_1,2024-08-04T15:23:15
-2024-08-04T09:23:12Z,SESSION-RESET-TRIGGER,TOKEN_2,2024-08-04T22:23:12
+2025-08-04 05:24:27,SESSION-RESET-TRIGGER,TOKEN_1,2025-08-04 18:24:27
+2025-08-07 15:00:29,SESSION-RESET-TRIGGER,TOKEN_2,2025-08-07 23:00:29
 ```
+
+**Event Types:**
+
+- `SESSION-RESET-TRIGGER`: Traditional session reset countdown activation
+- `SESSION-RESET-TRIGGER`: Integrated Q&A health check + session reset (ADR-003)
+
+**CSV Format:**
+
+- `timestamp`: UTC time in `YYYY-MM-DD HH:MM:SS` format
+- `event_type`: Event classification
+- `token_id`: TOKEN_1 or TOKEN_2 identifier
+- `reset_time_utc8`: Expected session reset time in UTC+8 timezone
 
 ## 🛠️ How It Works
 
 1. **GitHub Actions** scheduled triggers (4 times daily, based on ADR-001 decision)
-2. **Multiple Claude Code Actions** execute session reset triggers simultaneously
-3. **5-hour countdown activation** Each trigger starts Claude Code 5-hour reset countdown
-4. **Smart time scheduling** Ensures reset times correspond to mid-core working periods
-5. **Token identification** Each token triggers independently and marks source
-6. **GitHub Actions** executes git operations (add, commit, push)
-7. **Version control** Automatically records all reset trigger changes
+2. **Integrated Q&A Check** Asks Claude "1+1=?" with minimal response requirement (ADR-003)
+3. **Python Function** (`src/log_qa_check.py`) logs SESSION-RESET-TRIGGER to monthly CSV in logs/ directory
+4. **Time Calculation** Automatically calculates expected reset time (current UTC + 8 hours)
+5. **Token Identification** Maps OAuth tokens to TOKEN_1/TOKEN_2 identifiers
+6. **5-hour countdown activation** Each trigger starts Claude Code 5-hour reset countdown
+7. **Smart time scheduling** Ensures reset times correspond to mid-core working periods
+8. **GitHub Actions** executes git operations (add, commit, push)
+9. **Version control** Automatically records all integrated Q&A session reset triggers
 
 ## 📁 Project Structure
 
 ```
-claude-session-reset/
+claude-daily-check-in/
 ├── .github/
 │   └── workflows/
 │       └── auto-checkin.yml            # GitHub Actions workflow
+├── src/
+│   └── log_qa_check.py                 # Q&A session reset trigger logging script
 ├── logs/                               # Session log directory (auto-generated)
 │   ├── 202408-session-log.csv         # Monthly session reset records
 │   └── 202409-session-log.csv
 ├── ADR-001-session-reset-schedule.md  # Architecture decision record
 ├── ADR-002-github-actions-cron-timing-optimization.md  # Timing optimization ADR
+├── ADR-003-simple-qa-logging-feature.md  # Q&A health check ADR
+├── pyproject.toml                      # uv/Python project configuration
 ├── README.md                           # Project documentation
 ├── API.md                              # API documentation
 └── PRD.md                              # Product requirements document
@@ -108,7 +159,7 @@ schedule:
   - cron: "23 21,2,9,14 * * *" # UTC time, optimized for reliability and work periods
 ```
 
-For adjustments, refer to [ADR-001](./ADR-001-session-reset-schedule.md) for timing principles and [ADR-002](./ADR-002-github-actions-cron-timing-optimization.md) for reliability optimization.
+For adjustments, refer to [ADR-001](./ADR-001-session-reset-schedule.md) for timing principles, [ADR-002](./ADR-002-github-actions-cron-timing-optimization.md) for reliability optimization, and [ADR-003](./ADR-003-simple-qa-logging-feature.md) for Q&A health check feature.
 
 ### Multiple Token Configuration
 
@@ -174,8 +225,14 @@ claude --version
 # Test OAuth connection
 claude auth status
 
+# Test Q&A functionality locally
+claude -p "1+1=?"
+
+# Run local Q&A session reset trigger
+uv run --python 3.13 python src/log_qa_check.py --token TOKEN_1
+
 # Manually execute Session reset trigger
-claude --prompt "Execute test Session reset trigger and show detailed logs"
+claude -p "Execute test Session reset trigger and show detailed logs"
 
 # Check Session status
 claude session status
@@ -186,7 +243,7 @@ claude session status
 ### Check Execution Status
 
 1. **GitHub Actions**: Review workflow execution history
-2. **CSV Files**: Confirm monthly session reset record integrity
+2. **CSV Files**: Confirm monthly session reset record integrity in logs/ directory
 3. **Commit History**: Check automatic commit status
 4. **Session Effects**: Monitor actual work period session availability
 
@@ -214,6 +271,14 @@ claude session status
 5. Submit Pull Request
 
 ## 📝 Version History
+
+### v2.2.0
+
+- Implemented ADR-003: Integrated Q&A-Session-Reset-Trigger feature
+- Combined Q&A health check with session reset trigger logging
+- Python script (`src/log_qa_check.py`) with uv support and proper directory structure
+- Enhanced CSV format with calculated reset times (UTC+8)
+- Local testing capabilities with direct Python script execution
 
 ### v2.1.0
 
@@ -244,6 +309,6 @@ claude session status
 
 ---
 
-**Key Point**: Based on ADR-001 and ADR-002 decisions, this is an automated system optimized for Claude Code Session resets with reliability-enhanced scheduling, ensuring optimal Session availability during core working hours.
+**Key Point**: Based on ADR-001, ADR-002, and ADR-003 decisions, this is an automated system optimized for Claude Code Session resets with reliability-enhanced scheduling and health checking, ensuring optimal Session availability during core working hours.
 
 **Technical Support**: For issues, please check the [Issues](../../issues) page or submit new issues.
