@@ -32,9 +32,87 @@ Copy the generated `oauth_token_...`
    - Name: `CLAUDE_CODE_OAUTH_TOKEN_2` (strongly recommended)
    - Value: Your second OAuth token
 
-### 3. Deploy
+### 3. Adjust Schedule Times (Optional)
 
-Push this repository to GitHub, and the system will automatically start working.
+The system runs 4 times daily by default. You can customize these times based on your needs:
+
+#### 🕐 Understanding the Time Configuration
+
+The schedule is defined in `.github/workflows/auto-checkin.yml` using cron syntax in **UTC time**:
+
+```yaml
+schedule:
+  - cron: '23 21,2,9,14 * * *'  # Runs at: 21:23, 02:23, 09:23, 14:23 UTC
+```
+
+#### 📊 Time Conversion Table
+
+| Cron Time (UTC) | Trigger Time (UTC+8) | Session Reset Time (UTC+8) | Work Period Target (UTC+8) |
+|:----------------|:---------------------|:----------------------------|:----------------------------|
+| 21:23 UTC       | 05:23                | **10:00**                   | Morning (08:00-12:00)       |
+| 02:23 UTC       | 10:23                | **15:00**                   | Afternoon (13:00-17:00)     |
+| 09:23 UTC       | 17:23                | **22:00**                   | Evening (20:00-00:00)       |
+| 14:23 UTC       | 22:23                | **03:00** (next day)        | Late night period           |
+
+#### 🔧 How to Customize Times
+
+1. **Edit the workflow file**: `.github/workflows/auto-checkin.yml`
+2. **Find the cron line** (around line 12):
+   ```yaml
+   - cron: '23 21,2,9,14 * * *'
+   ```
+
+3. **Calculate your desired times**:
+   - Decide when you want sessions to reset (your target reset time in UTC+8)
+   - Subtract 5 hours to get the trigger time
+   - Convert your local trigger time to UTC
+   - Use the :23 minute mark for reliability (per ADR-002)
+
+4. **Common Examples**:
+
+   **Example 1: Single daily reset at 9:00 AM (UTC+8)**
+   ```yaml
+   - cron: '23 20 * * *'  # 20:23 UTC = 04:23 UTC+8 → Reset at 09:00 UTC+8
+   ```
+
+   **Example 2: Twice daily at 10:00 AM and 4:00 PM (UTC+8)**
+   ```yaml
+   - cron: '23 21,3 * * *'  # 21:23 & 03:23 UTC → Reset at 10:00 & 16:00 UTC+8
+   ```
+
+   **Example 3: Custom business hours (9:00, 14:00, 19:00 UTC+8)**
+   ```yaml
+   - cron: '23 20,1,6 * * *'  # Trigger 5 hours before each reset time
+   ```
+
+#### 📝 Cron Syntax Quick Reference
+
+```
+┌───────────── minute (0-59) - Always use 23 for reliability
+│ ┌─────────── hour (0-23) - UTC time
+│ │ ┌───────── day of month (1-31)
+│ │ │ ┌─────── month (1-12)
+│ │ │ │ ┌───── day of week (0-6)
+│ │ │ │ │
+23 21 * * *
+```
+
+**Tips:**
+- Multiple hours: `23 9,14,21 * * *` (runs at 09:23, 14:23, 21:23 UTC)
+- Every 6 hours: `23 */6 * * *`
+- Weekdays only: `23 9 * * 1-5`
+
+#### ⚠️ Important Notes
+
+- **Use `:23` minutes** to avoid congestion at :00 (per ADR-002), but note that GitHub Actions may have delays and could execute several minutes later, sometimes even in the next hour
+- **Remember the 5-hour countdown**: Trigger time + ~5 hours = Session reset time (rounded to the hour)
+- **UTC conversion is critical**: GitHub Actions uses UTC, not your local timezone
+- **Expect timing variations**: GitHub Actions doesn't guarantee exact execution times - there can be delays of several minutes or more
+- **Test changes**: Use the manual workflow trigger to verify your schedule works
+
+### 4. Deploy
+
+Push this repository to GitHub, and the system will automatically start working according to your configured schedule.
 
 ## 🧪 Testing
 
