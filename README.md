@@ -1,392 +1,350 @@
-# Claude Code Session Reset Scheduler
+# 🤖 Claude Code Session Reset Scheduler
 
-An automated Claude Code Session reset scheduling system based on ADR-001, ADR-002, and ADR-003 decisions. Uses GitHub Actions to trigger Claude Code at optimal times with reliability-optimized scheduling, starting a 5-hour reset countdown to ensure new Session quotas during core working hours. Includes a simple Q&A health check feature for basic functionality verification.
+> **Automated session management system that ensures fresh Claude Code quotas during your working hours**
 
-## 🕐 Session Reset Schedule
+A GitHub Actions-powered scheduler that automatically triggers Claude Code session resets at optimal times, maintaining a 5-hour countdown to ensure new quotas are available when you need them most. Features health monitoring through simple Q&A checks.
 
-Automatically executes 4 session reset triggers daily (UTC+8), optimized for three core working periods:
+---
 
-| Trigger Time | Reset Time         | Target Work Period | Description                     |
-| :----------- | :----------------- | :----------------- | :------------------------------ |
-| **05:23**    | **10:00**          | 08:00-12:00        | Mid-morning work period reset   |
-| **10:23**    | **15:00**          | 13:00-17:00        | Mid-afternoon work period reset |
-| **17:23**    | **22:00**          | 20:00-00:00        | Mid-evening work period reset   |
-| **22:23**    | **Next day 03:00** | Late night period  | Additional usage coverage       |
+## ✨ Key Features
 
-## 🚀 Setup Steps
+- **🔄 Automatic Session Management** - Triggers 4 daily resets aligned with work periods
+- **⏰ Smart Timing** - 5-hour countdown ensures sessions refresh during productive hours
+- **🧪 Health Monitoring** - Built-in Q&A checks verify system functionality
+- **🔐 Multi-Token Support** - Configure backup tokens for reliability
+- **📊 Activity Logging** - Track all resets in monthly CSV logs
 
-### 1. Get OAuth Token
+---
+
+## 📅 Default Schedule (UTC+8 Timezone)
+
+The system triggers session resets **5 hours before** your target work periods:
+
+| 🕐 Trigger | ⏰ Session Resets  | 💼 Work Period Coverage |
+| :--------- | :----------------- | :---------------------- |
+| **05:23**  | **10:00 AM**       | Morning (8:00-12:00)    |
+| **10:23**  | **3:00 PM**        | Afternoon (1:00-5:00)   |
+| **17:23**  | **10:00 PM**       | Evening (8:00-12:00)    |
+| **22:23**  | **3:00 AM** (next) | Late night coverage     |
+
+---
+
+## 🚀 Quick Start
+
+### Step 1: Get the Repository
+
+Choose one option:
+
+**Option A: Fork (Recommended for personal use)**
+
+```bash
+# 1. Fork this repo on GitHub
+# 2. Clone your fork
+git clone https://github.com/codeotter0201/claude-daily-check-in.git
+cd claude-daily-check-in
+```
+
+**Option B: Clone directly**
+
+```bash
+git clone https://github.com/codeotter0201/claude-daily-check-in.git
+cd claude-daily-check-in
+```
+
+### Step 2: Generate OAuth Token
 
 ```bash
 claude setup-token
 ```
 
-Copy the generated `oauth_token_...`
+Copy the generated `oauth_token_...` value.
 
-### 2. Configure GitHub Secrets
+### Step 3: Add to GitHub Secrets
 
-1. Go to repository **Settings** → **Secrets and variables** → **Actions**
-2. Add secrets (recommend setting multiple for backup and load distribution):
-   - Name: `CLAUDE_CODE_OAUTH_TOKEN_1`
-   - Value: Your first OAuth token
-   - Name: `CLAUDE_CODE_OAUTH_TOKEN_2` (strongly recommended)
-   - Value: Your second OAuth token
+1. Navigate to: **Settings** → **Secrets and variables** → **Actions**
+2. Create new secrets:
 
-### 3. Adjust Schedule Times (Optional)
+| Secret Name                 | Value                   | Required    |
+| :-------------------------- | :---------------------- | :---------- |
+| `CLAUDE_CODE_OAUTH_TOKEN_1` | Your first OAuth token  | ✅ Yes      |
+| `CLAUDE_CODE_OAUTH_TOKEN_2` | Your second OAuth token | ⭐ Optional |
 
-The system runs 4 times daily by default. You can customize these times based on your needs:
+### Step 4: Done!
 
-#### 🕐 Understanding the Time Configuration
+✅ The scheduler is now active and will run automatically based on the default schedule.
 
-The schedule is defined in `.github/workflows/auto-checkin.yml` using cron syntax in **UTC time**:
+- First trigger will happen at the next scheduled time
+- Check the **Actions** tab in your GitHub repository to monitor runs
+- No push needed unless you modify the schedule
+
+---
+
+## ⚙️ Customizing Schedule Times
+
+### Understanding the Timing System
+
+Each trigger initiates a 5-hour countdown. The formula is:
+
+```
+Trigger Time + 5 hours = Session Reset Time
+```
+
+### Quick Examples
+
+<details>
+<summary><b>📝 Click for Common Schedule Configurations</b></summary>
+
+#### Single Daily Reset (9:00 AM)
 
 ```yaml
 schedule:
-  - cron: '23 21,2,9,14 * * *'  # Runs at: 21:23, 02:23, 09:23, 14:23 UTC
+  - cron: "23 20 * * *" # Triggers at 4:23 AM → Resets at 9:00 AM
 ```
 
-#### 📊 Time Conversion Table
+#### Twice Daily (10:00 AM & 4:00 PM)
 
-| Cron Time (UTC) | Trigger Time (UTC+8) | Session Reset Time (UTC+8) | Work Period Target (UTC+8) |
-|:----------------|:---------------------|:----------------------------|:----------------------------|
-| 21:23 UTC       | 05:23                | **10:00**                   | Morning (08:00-12:00)       |
-| 02:23 UTC       | 10:23                | **15:00**                   | Afternoon (13:00-17:00)     |
-| 09:23 UTC       | 17:23                | **22:00**                   | Evening (20:00-00:00)       |
-| 14:23 UTC       | 22:23                | **03:00** (next day)        | Late night period           |
-
-#### 🔧 How to Customize Times
-
-1. **Edit the workflow file**: `.github/workflows/auto-checkin.yml`
-2. **Find the cron line** (around line 12):
-   ```yaml
-   - cron: '23 21,2,9,14 * * *'
-   ```
-
-3. **Calculate your desired times**:
-   - Decide when you want sessions to reset (your target reset time in UTC+8)
-   - Subtract 5 hours to get the trigger time
-   - Convert your local trigger time to UTC
-   - Use the :23 minute mark for reliability (per ADR-002)
-
-4. **Common Examples**:
-
-   **Example 1: Single daily reset at 9:00 AM (UTC+8)**
-   ```yaml
-   - cron: '23 20 * * *'  # 20:23 UTC = 04:23 UTC+8 → Reset at 09:00 UTC+8
-   ```
-
-   **Example 2: Twice daily at 10:00 AM and 4:00 PM (UTC+8)**
-   ```yaml
-   - cron: '23 21,3 * * *'  # 21:23 & 03:23 UTC → Reset at 10:00 & 16:00 UTC+8
-   ```
-
-   **Example 3: Custom business hours (9:00, 14:00, 19:00 UTC+8)**
-   ```yaml
-   - cron: '23 20,1,6 * * *'  # Trigger 5 hours before each reset time
-   ```
-
-#### 📝 Cron Syntax Quick Reference
-
-```
-┌───────────── minute (0-59) - Always use 23 for reliability
-│ ┌─────────── hour (0-23) - UTC time
-│ │ ┌───────── day of month (1-31)
-│ │ │ ┌─────── month (1-12)
-│ │ │ │ ┌───── day of week (0-6)
-│ │ │ │ │
-23 21 * * *
+```yaml
+schedule:
+  - cron: "23 21,3 * * *" # Triggers at 5:23 AM & 11:23 AM
 ```
 
-**Tips:**
-- Multiple hours: `23 9,14,21 * * *` (runs at 09:23, 14:23, 21:23 UTC)
-- Every 6 hours: `23 */6 * * *`
-- Weekdays only: `23 9 * * 1-5`
+#### Business Hours (9:00 AM, 2:00 PM, 7:00 PM)
 
-#### ⚠️ Important Notes
+```yaml
+schedule:
+  - cron: "23 20,1,6 * * *" # Triggers 5 hours before each
+```
 
-- **Use `:23` minutes** to avoid congestion at :00 (per ADR-002), but note that GitHub Actions may have delays and could execute several minutes later, sometimes even in the next hour
-- **Remember the 5-hour countdown**: Trigger time + ~5 hours = Session reset time (rounded to the hour)
-- **UTC conversion is critical**: GitHub Actions uses UTC, not your local timezone
-- **Expect timing variations**: GitHub Actions doesn't guarantee exact execution times - there can be delays of several minutes or more
-- **Test changes**: Use the manual workflow trigger to verify your schedule works
+</details>
 
-### 4. Deploy
+### How to Modify Schedule
 
-Push this repository to GitHub, and the system will automatically start working according to your configured schedule.
+1. **Edit** `.github/workflows/auto-checkin.yml`
+2. **Find** the schedule line (~line 12):
+   ```yaml
+   - cron: "23 21,2,9,14 * * *" # Current schedule
+   ```
+3. **Calculate** your times:
+   - Choose reset times (in your timezone)
+   - Subtract 5 hours for trigger times
+   - Convert to UTC
+   - Use `:23` minutes (avoids congestion)
+4. **Push your changes** to apply the new schedule:
+   ```bash
+   git add .github/workflows/auto-checkin.yml
+   git commit -m "Update schedule times"
+   git push origin main
+   ```
 
-## 🧪 Testing
+<details>
+<summary><b>🌍 Time Zone Conversion Helper</b></summary>
 
-### GitHub Testing
+| Your Reset Time (UTC+8) | Trigger Time (UTC+8) | Cron Hour (UTC) |
+| :---------------------- | :------------------- | :-------------- |
+| 9:00 AM                 | 4:23 AM              | 20              |
+| 10:00 AM                | 5:23 AM              | 21              |
+| 2:00 PM                 | 9:23 AM              | 1               |
+| 3:00 PM                 | 10:23 AM             | 2               |
+| 7:00 PM                 | 2:23 PM              | 6               |
+| 10:00 PM                | 5:23 PM              | 9               |
+
+</details>
+
+---
+
+## 🧪 Testing Your Setup
+
+### Via GitHub Actions (Recommended)
 
 1. Go to **Actions** tab
-2. Select "Claude Code Session Reset Scheduler" workflow
-3. Click **Run workflow** to manually trigger test
+2. Select **"Claude Code Session Reset Scheduler"**
+3. Click **"Run workflow"**
 
 ### Local Testing
 
-#### Method 1: Using Python Script Directly
-
-Test the Q&A logging functionality locally:
-
 ```bash
-# Using uv (recommended)
+# Test Q&A functionality
 uv run --python 3.13 python src/log_qa_check.py --token TOKEN_1
 
-# Or using system Python
-python3 src/log_qa_check.py --token TOKEN_2
-```
-
-#### Method 2: Using Claude Code with Prompt
-
-Simulate the GitHub Actions workflow locally:
-
-```bash
-# Simple Q&A test
-claude -p "1+1=?"
-
-# Then run the logging script
-uv run --python 3.13 python src/log_qa_check.py --token TOKEN_1
-```
-
-#### Method 3: Complete Simulation
-
-Test the complete workflow locally:
-
-```bash
-# Step 1: Ask Claude the Q&A question
-claude -p "1+1=? # Answer should be 2. Do not answer anything else."
-
-# Step 2: Log the Q&A session reset trigger
-uv run --python 3.13 python src/log_qa_check.py --token TOKEN_1
-
-# Step 3: Check the generated CSV file
+# View logs
 cat logs/$(date +%Y%m)-session-log.csv
 ```
 
-**Note**: Local testing only updates files, manual git operations required:
+---
 
-```bash
-git add logs/*.csv
-git commit -m "chore: Manual Q&A session reset trigger test"
-git push
-```
+## 📊 Session Logs
 
-## 📊 Data Format
+Monthly CSV files track all activities:
 
-Session reset records are stored in monthly CSV files (`logs/YYYYMM-session-log.csv`):
+**Location:** `logs/YYYYMM-session-log.csv`
+
+**Format:**
 
 ```csv
 timestamp,event_type,token_id,reset_time_utc8
-2025-08-04 05:24:27,SESSION-RESET-TRIGGER,TOKEN_1,2025-08-04 18:24:27
-2025-08-07 15:00:29,SESSION-RESET-TRIGGER,TOKEN_2,2025-08-07 23:00:29
+2025-09-04 05:24:27,SESSION-RESET-TRIGGER,TOKEN_1,2025-09-04 18:24:27
 ```
 
-**Event Types:**
+---
 
-- `SESSION-RESET-TRIGGER`: Traditional session reset countdown activation
-- `SESSION-RESET-TRIGGER`: Integrated Q&A health check + session reset (ADR-003)
+## 🛠️ Architecture
 
-**CSV Format:**
+### System Flow
 
-- `timestamp`: UTC time in `YYYY-MM-DD HH:MM:SS` format
-- `event_type`: Event classification
-- `token_id`: TOKEN_1 or TOKEN_2 identifier
-- `reset_time_utc8`: Expected session reset time in UTC+8 timezone
+```mermaid
+graph LR
+    A[GitHub Actions] -->|Scheduled Trigger| B[Claude Code]
+    B -->|"Q&A Check: 1+1=?"| C[Health Verification]
+    C -->|Log Event| D[CSV File]
+    D -->|Git Commit| E[Repository]
+    B -->|5-hour Countdown| F[Session Reset]
+```
 
-## 🛠️ How It Works
-
-1. **GitHub Actions** scheduled triggers (4 times daily, based on ADR-001 decision)
-2. **Integrated Q&A Check** Asks Claude "1+1=?" with minimal response requirement (ADR-003)
-3. **Python Function** (`src/log_qa_check.py`) logs SESSION-RESET-TRIGGER to monthly CSV in logs/ directory
-4. **Time Calculation** Automatically calculates expected reset time (current UTC + 8 hours)
-5. **Token Identification** Maps OAuth tokens to TOKEN_1/TOKEN_2 identifiers
-6. **5-hour countdown activation** Each trigger starts Claude Code 5-hour reset countdown
-7. **Smart time scheduling** Ensures reset times correspond to mid-core working periods
-8. **GitHub Actions** executes git operations (add, commit, push)
-9. **Version control** Automatically records all integrated Q&A session reset triggers
-
-## 📁 Project Structure
+### Project Structure
 
 ```
-claude-daily-check-in/
-├── .github/
-│   └── workflows/
-│       └── auto-checkin.yml            # GitHub Actions workflow
-├── src/
-│   └── log_qa_check.py                 # Q&A session reset trigger logging script
-├── logs/                               # Session log directory (auto-generated)
-│   ├── 202408-session-log.csv         # Monthly session reset records
-│   └── 202409-session-log.csv
-├── ADR-001-session-reset-schedule.md  # Architecture decision record
-├── ADR-002-github-actions-cron-timing-optimization.md  # Timing optimization ADR
-├── ADR-003-simple-qa-logging-feature.md  # Q&A health check ADR
-├── pyproject.toml                      # uv/Python project configuration
-├── README.md                           # Project documentation
-├── API.md                              # API documentation
-└── PRD.md                              # Product requirements document
+📁 claude-daily-check-in/
+├── 📁 .github/workflows/
+│   └── 📄 auto-checkin.yml         # Scheduler configuration
+├── 📁 src/
+│   └── 🐍 log_qa_check.py          # Q&A & logging script
+├── 📁 logs/                        # Session records
+│   └── 📊 YYYYMM-session-log.csv
+├── 📄 README.md                    # This file
+└── 📄 ADR-*.md                     # Architecture decisions
 ```
+
+---
 
 ## 🔧 Advanced Configuration
 
-### Custom Reset Times
+### Multiple Token Setup
 
-Based on ADR-001 decision, current optimal schedule:
+Benefits of using multiple tokens:
 
-```yaml
-schedule:
-  - cron: "23 21,2,9,14 * * *" # UTC time, optimized for reliability and work periods
-```
+- ✅ **Redundancy** - Backup if one fails
+- ✅ **Load Distribution** - Parallel processing
+- ✅ **Tracking** - Individual token monitoring
 
-For adjustments, refer to [ADR-001](./ADR-001-session-reset-schedule.md) for timing principles, [ADR-002](./ADR-002-github-actions-cron-timing-optimization.md) for reliability optimization, and [ADR-003](./ADR-003-simple-qa-logging-feature.md) for Q&A health check feature.
-
-### Multiple Token Configuration
-
-System supports multiple Claude Code OAuth tokens for improved reliability:
-
-```yaml
-# GitHub Secrets configuration
-CLAUDE_CODE_OAUTH_TOKEN_1=oauth_token_xxx...
-CLAUDE_CODE_OAUTH_TOKEN_2=oauth_token_yyy...
-```
-
-**Benefits:**
-
-- **Backup mechanism**: Other tokens continue working if one fails
-- **Load distribution**: Multiple tokens check in simultaneously, improving success rate
-- **Identification tracking**: Each record marks token source
-
-### Environment Variables
-
-Additional variables can be set in GitHub Secrets:
-
-- `TIMEZONE`: Timezone setting (default: Asia/Taipei)
-- `LOG_FORMAT`: Log format (default: CSV)
+---
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+<details>
+<summary><b>❌ OAuth Token Error</b></summary>
 
-#### 1. OAuth Token Error
-
-```
-Error: Could not fetch an OIDC token
-```
+**Error:** `Could not fetch an OIDC token`
 
 **Solutions:**
 
-- Ensure GitHub Actions permissions include `id-token: write`
-- Regenerate OAuth token: `claude setup-token`
-- Check Secret names are correct: `CLAUDE_CODE_OAUTH_TOKEN_1`, `CLAUDE_CODE_OAUTH_TOKEN_2`
-- At least one valid token must be configured
+- Regenerate token: `claude setup-token`
+- Verify secret names match exactly
+- Check GitHub Actions has `id-token: write` permission
+</details>
 
-#### 2. Session Reset Failure
+<details>
+<summary><b>⏰ Wrong Reset Times</b></summary>
 
-**Check steps:**
+**Checklist:**
 
-1. Review Actions execution logs
-2. Confirm logs/ directory permissions
-3. Check git configuration is correct
-4. Verify Claude Code Session resets properly
+- GitHub Actions uses UTC (not local time)
+- The 5-hour countdown is automatic
+- GitHub may delay execution by several minutes
+- Check timezone conversion calculations
+</details>
 
-#### 3. Incorrect Time
+<details>
+<summary><b>📝 No Logs Created</b></summary>
 
-- Check system timezone settings
-- GitHub Actions uses UTC time
-- Be aware of timezone conversion during local testing
-
-### Debug Commands
+**Debug Steps:**
 
 ```bash
 # Check Claude status
 claude --version
-
-# Test OAuth connection
 claude auth status
 
-# Test Q&A functionality locally
+# Test locally
 claude -p "1+1=?"
 
-# Run local Q&A session reset trigger
+# Manual trigger
 uv run --python 3.13 python src/log_qa_check.py --token TOKEN_1
-
-# Manually execute Session reset trigger
-claude -p "Execute test Session reset trigger and show detailed logs"
-
-# Check Session status
-claude session status
 ```
 
-## 📈 Monitoring & Maintenance
-
-### Check Execution Status
-
-1. **GitHub Actions**: Review workflow execution history
-2. **CSV Files**: Confirm monthly session reset record integrity in logs/ directory
-3. **Commit History**: Check automatic commit status
-4. **Session Effects**: Monitor actual work period session availability
-
-### Regular Maintenance
-
-- Monthly CSV file format checks
-- Clean old execution logs
-- Update OAuth tokens (as needed)
-- Review session reset effects and adjust timing
-- Regularly review ADR-001 decision effectiveness
-
-## 🔒 Security Considerations
-
-- **Never** hardcode tokens in code
-- Regularly rotate OAuth tokens
-- Use GitHub Secrets for sensitive information
-- Restrict repository access permissions
-
-## 🤝 Contributing
-
-1. Fork this repository
-2. Create feature branch: `git checkout -b feature/new-feature`
-3. Commit changes: `git commit -m 'Add new feature'`
-4. Push branch: `git push origin feature/new-feature`
-5. Submit Pull Request
-
-## 📝 Version History
-
-### v2.2.0
-
-- Implemented ADR-003: Integrated Q&A-Session-Reset-Trigger feature
-- Combined Q&A health check with session reset trigger logging
-- Python script (`src/log_qa_check.py`) with uv support and proper directory structure
-- Enhanced CSV format with calculated reset times (UTC+8)
-- Local testing capabilities with direct Python script execution
-
-### v2.1.0
-
-- Implemented ADR-002: GitHub Actions cron timing optimization
-- Changed trigger time from :00 to :23 minutes for improved reliability
-- Updated all timing references to reflect 23-minute offset
-- Enhanced documentation with reliability considerations
-
-### v2.0.0
-
-- Repositioned as Claude Code Session reset system
-- Optimized time scheduling based on ADR-001
-- Smart reset for core work periods
-- Added reset_time_utc8 field tracking
-- Updated file naming convention (session-log.csv)
-
-### v1.1.0
-
-- Multiple OAuth token support
-- Token identification tracking feature
-- Improved backup mechanism
-
-### v1.0.0
-
-- Basic auto check-in functionality
-- CSV log format
-- GitHub Actions integration
+</details>
 
 ---
 
-**Key Point**: Based on ADR-001, ADR-002, and ADR-003 decisions, this is an automated system optimized for Claude Code Session resets with reliability-enhanced scheduling and health checking, ensuring optimal Session availability during core working hours.
+## 📈 Monitoring
 
-**Technical Support**: For issues, please check the [Issues](../../issues) page or submit new issues.
+### Health Checks
+
+- ✅ **GitHub Actions** - Review workflow runs
+- ✅ **CSV Logs** - Verify monthly records
+- ✅ **Git History** - Check automated commits
+- ✅ **Session Availability** - Monitor actual resets
+
+### Maintenance Tasks
+
+- 📅 **Monthly** - Review log files
+- 🔄 **Quarterly** - Rotate OAuth tokens
+- 📊 **As Needed** - Adjust schedule based on usage
+
+---
+
+## 🔒 Security
+
+⚠️ **Important Security Practices:**
+
+- Never hardcode tokens in code
+- Use GitHub Secrets for sensitive data
+- Rotate OAuth tokens regularly
+- Limit repository access permissions
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+---
+
+## 📝 Version History
+
+### v2.2.0 (Current)
+
+- ✅ Integrated Q&A health checks
+- ✅ Enhanced logging with reset time calculations
+- ✅ Local testing capabilities
+
+### v2.1.0
+
+- ✅ Optimized cron timing (`:23` minutes)
+- ✅ Reliability improvements
+
+### v2.0.0
+
+- ✅ Complete rewrite for session management
+- ✅ Smart scheduling for work periods
+
+---
+
+## 📚 Documentation
+
+- [ADR-001: Session Reset Schedule](./ADR-001-session-reset-schedule.md)
+- [ADR-002: Timing Optimization](./ADR-002-github-actions-cron-timing-optimization.md)
+- [ADR-003: Q&A Health Checks](./ADR-003-simple-qa-logging-feature.md)
+- [Official Documentation](./DOC.md)
+- [Product Requirements](./PRD.md)
+
+---
+
+<div align="center">
+  <i>Built with ❤️ for productive Claude Code sessions</i>
+  <br>
+  <sub>Based on architecture decisions optimized for reliability and user convenience</sub>
+</div>
