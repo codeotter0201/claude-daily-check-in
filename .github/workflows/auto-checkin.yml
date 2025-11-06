@@ -16,6 +16,7 @@ on:
 jobs:
   session-reset:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       id-token: write
       contents: write
@@ -51,6 +52,7 @@ jobs:
         continue-on-error: true
         with:
           mode: agent
+          timeout_minutes: 2
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_1 }}
           direct_prompt: |
             1+1=? # Answer should be 2. Do not answer anything else.
@@ -63,6 +65,7 @@ jobs:
         continue-on-error: true
         with:
           mode: agent
+          timeout_minutes: 2
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           direct_prompt: |
             1+1=? # Answer should be 2. Do not answer anything else.

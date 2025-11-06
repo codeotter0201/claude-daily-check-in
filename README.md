@@ -13,6 +13,7 @@ A GitHub Actions-powered scheduler that automatically triggers Claude Code sessi
 - **🧪 Health Monitoring** - Built-in Q&A checks verify system functionality
 - **🔐 Multi-Token Support** - Configure backup tokens for reliability
 - **📊 Activity Logging** - Track all resets in monthly CSV logs
+- **⚡ Fast Failure Protection** - 5-minute job timeout prevents resource waste
 
 ---
 
@@ -233,13 +234,29 @@ Benefits of using multiple tokens:
 <details>
 <summary><b>❌ OAuth Token Error</b></summary>
 
-**Error:** `Could not fetch an OIDC token`
+**Error:** `Could not fetch an OIDC token` or `401 Bad credentials`
 
 **Solutions:**
 
 - Regenerate token: `claude setup-token`
 - Verify secret names match exactly
 - Check GitHub Actions has `id-token: write` permission
+- Update `CLAUDE_CODE_OAUTH_TOKEN_1` and `CLAUDE_CODE_OAUTH_TOKEN_2` in GitHub Secrets
+</details>
+
+<details>
+<summary><b>⏱️ Workflow Timeout (6 hours)</b></summary>
+
+**Status:** Fixed in current version
+
+**Solution:** The workflow now includes timeout protection:
+- Job-level timeout: 5 minutes
+- Step-level timeout: 2 minutes per action
+
+If you still experience timeouts:
+1. Update to the latest `.github/workflows/auto-checkin.yml`
+2. Verify timeout configurations are present
+3. Check for authentication errors that may cause hanging
 </details>
 
 <details>
@@ -315,21 +332,14 @@ We welcome contributions! Please:
 
 ## 📝 Version History
 
-### v2.2.0 (Current)
+### v2.3.0 (Current)
 
+- ✅ Workflow timeout protection (5-minute job, 2-minute steps)
+- ✅ Fast failure mechanism prevents 6-hour runaway executions
 - ✅ Integrated Q&A health checks
 - ✅ Enhanced logging with reset time calculations
 - ✅ Local testing capabilities
-
-### v2.1.0
-
 - ✅ Optimized cron timing (`:23` minutes)
-- ✅ Reliability improvements
-
-### v2.0.0
-
-- ✅ Complete rewrite for session management
-- ✅ Smart scheduling for work periods
 
 ---
 
@@ -338,6 +348,7 @@ We welcome contributions! Please:
 - [ADR-001: Session Reset Schedule](./ADR-001-session-reset-schedule.md)
 - [ADR-002: Timing Optimization](./ADR-002-github-actions-cron-timing-optimization.md)
 - [ADR-003: Q&A Health Checks](./ADR-003-simple-qa-logging-feature.md)
+- [ADR-004: Workflow Timeout Configuration](./ADR-004-workflow-timeout-configuration.md)
 - [Official Documentation](./DOC.md)
 - [Product Requirements](./PRD.md)
 
